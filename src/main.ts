@@ -6,6 +6,7 @@ import {createConnection, getConnection} from "typeorm"
 import {Discord} from "./discord"
 import {StartonRole} from "./role"
 import {Member} from "./entity/member.entity"
+import { join } from "path"
 const cors = require('cors')
 require('dotenv').config()
 
@@ -21,9 +22,7 @@ createConnection({
     password: process.env.TYPEORM_PASSWORD as string,
     database: process.env.TYPEORM_DATABASE as string,
     synchronize: true,
-    entities: [
-        "src/entity/**/*.ts"
-    ],
+    entities: [join(__dirname, '**', '*.entity.{ts,js}')],
     migrations: [
         "src/migration/**/*.ts"
     ],
