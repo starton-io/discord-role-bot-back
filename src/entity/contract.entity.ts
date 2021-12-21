@@ -28,6 +28,9 @@ export class Contract {
     @Column({nullable: true})
     max?: number
 
+    @Column({nullable: true})
+    tokenId?: string
+
 
 }
 
