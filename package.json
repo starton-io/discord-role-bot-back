@@ -9,7 +9,7 @@
     "dev": "ts-node src/main.ts"
   },
   "engines": {
-    "node": "16.6.0"
+    "node": ">16.6.0"
   },
   "author": "Cedric Cervantes <cedric@starton.io>",
   "license": "MIT",

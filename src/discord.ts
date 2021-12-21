@@ -1,3 +1,4 @@
+import "reflect-metadata"
 import { Client } from "discordx"
 import {Intents} from "discord.js"
 import { importx } from "@discordx/importer"
@@ -22,10 +23,10 @@ export class Discord {
             //     path.join(__dirname, "commands", "**/*.{ts,js}"),
             //     path.join(__dirname, "events", "**/*.{ts,js}"),
             // ],
-            // botGuilds: [(client) => client.guilds.cache.map((guild) => guild.id)],
-            botGuilds: [
-                process.env.GUILD_ID as string
-            ],
+            botGuilds: [(client) => client.guilds.cache.map((guild) => guild.id)],
+            // botGuilds: [
+            //     process.env.GUILD_ID as string
+            // ],
             silent: true,
         })
 

@@ -20,6 +20,7 @@ createConnection({
     username: process.env.TYPEORM_USERNAME as string,
     password: process.env.TYPEORM_PASSWORD as string,
     database: process.env.TYPEORM_DATABASE as string,
+    synchronize: true,
     entities: [
         "src/entity/**/*.ts"
     ],
