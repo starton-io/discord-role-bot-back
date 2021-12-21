@@ -36,6 +36,10 @@ export class Discord {
 
             console.log("Bot started")
         })
+        this._client.on("guildCreate", async guild => {
+            await this._client.initApplicationCommands()
+            await this._client.initApplicationPermissions()
+        })
 
         this._client.on("interactionCreate", (interaction) => {
             this._client.executeInteraction(interaction)

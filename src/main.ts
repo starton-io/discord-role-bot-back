@@ -35,7 +35,6 @@ createConnection({
     await StartonRole.start()
 
     app.post("/verify/:id", async(req: Request, res: Response) => {
-        console.log("here")
         if (!req.body.signature) {
             return res.status(400).json({
                 error: "You must include a signature"

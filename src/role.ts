@@ -48,11 +48,11 @@ export class StartonRole {
                 if (contractEntity.type === Type.ERC721) {
                     response = await contract.balanceOf(member.address)
                     const amount = BigNumber.from(response.toString())
-                    console.log(amount)
-                    if (amount.gt(contractEntity.min)) {
+                    if (amount.gte(contractEntity.min)) {
                         const guild = await Discord.Client.guilds.fetch(contractEntity.guildId)
                         const discordUser = await guild?.members.fetch(member.memberId)
                         discordUser?.roles.add(contractEntity.role)
+                        console.log(`Role ${contractEntity.role} given to user ${member.memberId} (${member.address}) with ${amount.toString()} ${contractEntity.type} (${contractEntity.address}) `)
                     }
                 }
             } catch (e) {
@@ -89,11 +89,11 @@ export class StartonRole {
                 if (contractEntity.type === Type.ERC721) {
                     response = await contract.balanceOf(member.address)
                     const amount = BigNumber.from(response.toString())
-                    console.log(amount)
-                    if (amount.gt(contractEntity.min)) {
+                    if (amount.gte(contractEntity.min)) {
                         const guild = await Discord.Client.guilds.fetch(contractEntity.guildId)
                         const discordUser = await guild?.members.fetch(member.memberId)
                         discordUser?.roles.add(contractEntity.role)
+                        console.log(`Role ${contractEntity.role} given to user ${member.memberId} (${member.address}) with ${amount.toString()} ${contractEntity.type} (${contractEntity.address}) `)
                     }
                 }
             } catch (e) {
