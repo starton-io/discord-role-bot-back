@@ -7,19 +7,10 @@ import abi from "./config/abi"
 import {Discord} from "./discord"
 import {Member} from "./entity/member.entity"
 
-/**
- * Todo on v2 of starton connect api can be avoid all the providers with a call on starton
- */
-export class StartonRole {
+export class Starton {
 
-    static providers: Record<string, any> = {}
+    static async registerContract() {
 
-    static async start(): Promise<boolean> {
-
-        for (const [network, providers] of Object.entries(networks)) {
-            await this.initProvider(network as Network)
-        }
-        return true
     }
 
     static async assignRolesToMember(member: Member) {
@@ -105,35 +96,4 @@ export class StartonRole {
             }
         }
     }
-
-    static async initProvider(network: Network): Promise<boolean> {
-        const providers = networks[network] as any
-        const etherProviders = []
-        for (const provider of providers) {
-            try {
-                const rpcProvider = new ethers.providers.StaticJsonRpcProvider(provider.rpc, provider.chainId)
-                etherProviders.push({
-                    provider: rpcProvider,
-                    weight: provider.weight || 1,
-                    priority: provider.priority || 1,
-                    stallTimeout: provider.stallTimeout || null,
-                })
-            } catch (e: any) {
-                console.error("Could not initialize provider : ", { provider, error: e.toString() })
-            }
-        }
-
-        try {
-            const provider = new ethers.providers.FallbackProvider(etherProviders, (providers as any).length  > 4 ? 2 : undefined)
-            this.providers[network] = provider
-            console.info("Provider for network initiated with success", { id: network })
-        } catch (e) {
-            console.error("Could not initialize the FallbackProvider : ", { etherProviders, error: e })
-            await new Promise(r => setTimeout(r, 2000))
-            return this.initProvider(network)
-        }
-        return true
-    }
-
-
 }
