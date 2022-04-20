@@ -1,16 +1,43 @@
 import {Network, Type} from "./interface/global"
-import {BigNumber, ethers} from "ethers"
 import {getConnection} from "typeorm"
 import {Contract} from "./entity/contract.entity"
-import networks from "./config/provider"
 import abi from "./config/abi"
 import {Discord} from "./discord"
 import {Member} from "./entity/member.entity"
+import axios from "axios";
+import {Guild} from "./entity/guild.entity";
 
 export class Starton {
 
-    static async registerContract() {
+    static async getApiKey(guildId: string) {
+        const guildRepo = getConnection().getRepository(Guild)
+        const guildEntity = await guildRepo.findOneOrFail({
+            where: {
+                guildId: guildId
+            }
+        })
+        return guildEntity.apiKey
+    }
 
+    static async verifyApiKey(apiKey: string) {
+        return axios.get("https://api-staging.starton.io/v2/smart-contract/", {
+            headers: {
+                "x-api-key": apiKey
+            }
+        })
+    }
+
+    static async registerContract(guildId: string, type: Type, network: Network, address: string) {
+        return axios.post("https://api-staging.starton.io/v2/smart-contract/import-existing", {
+            abi: abi[type],
+            network: network,
+            name: `${type}-${address}`,
+            address: address
+        }, {
+            headers: {
+                "x-api-key": await this.getApiKey(guildId)
+            }
+        })
     }
 
     static async assignRolesToMember(member: Member) {
@@ -22,27 +49,24 @@ export class Starton {
             }
         })
         for (const contractEntity of contracts) {
-            let contract: ethers.Contract
-            try {
-                const provider = this.providers[contractEntity.network] as ethers.providers.FallbackProvider
-                contract = new ethers.Contract(contractEntity.address, abi[contractEntity.type], provider)
-            } catch (e) {
-                console.error("Could not initialize the contract")
-                return
+            let params
+            if (contractEntity.type === Type.ERC721 || contractEntity.type === Type.ERC20) {
+                params = [member.address]
+            } else if (contractEntity.type === Type.ERC1155) {
+                params = [member.address, contractEntity.tokenId]
             }
 
-            /**
-             * Read the contract data
-             */
-            let response
             try {
-                if (contractEntity.type === Type.ERC721 || contractEntity.type === Type.ERC20) {
-                    response = await contract.balanceOf(member.address)
-                } else if (contractEntity.type === Type.ERC1155) {
-                    response = await contract.balanceOf(member.address, contractEntity.tokenId)
-                }
-                const amount = BigNumber.from(response.toString())
-                if (amount.gte(contractEntity.min)) {
+                const response = await axios.post(`https://api-staging.starton.io/v2/smart-contract/${contractEntity.network}/${contractEntity.address}/read`, {
+                    functionName: "balanceOf",
+                    params: params,
+                }, {
+                    headers: {
+                        "x-api-key": await this.getApiKey(member.guildId)
+                    }
+                })
+                const amount = parseInt(response.data.response.raw)
+                if (amount >= contractEntity.min) {
                     const guild = await Discord.Client.guilds.fetch(contractEntity.guildId)
                     const discordUser = await guild?.members.fetch(member.memberId)
                     discordUser?.roles.add(contractEntity.role)
@@ -58,15 +82,6 @@ export class Starton {
 
     static async assignRoleToAllMembers(contractEntity: Contract) {
 
-        let contract: ethers.Contract
-        try {
-            const provider = this.providers[contractEntity.network] as ethers.providers.FallbackProvider
-            contract = new ethers.Contract(contractEntity.address, abi[contractEntity.type], provider)
-        } catch (e) {
-            console.error("Could not initialize the contract")
-            return
-        }
-
         const memberRepo = getConnection().getRepository(Member)
         const members = await memberRepo.find({
             where: {
@@ -77,15 +92,29 @@ export class Starton {
             /**
              * Read the contract data
              */
-            let response
+            let params
+            if (contractEntity.type === Type.ERC721 || contractEntity.type === Type.ERC20) {
+                params = [member.address]
+            } else if (contractEntity.type === Type.ERC1155) {
+                params = [member.address, contractEntity.tokenId]
+            }
+
             try {
-                if (contractEntity.type === Type.ERC721 || contractEntity.type === Type.ERC20) {
-                    response = await contract.balanceOf(member.address)
-                } else if (contractEntity.type === Type.ERC1155) {
-                    response = await contract.balanceOf(member.address, contractEntity.tokenId)
-                }
-                const amount = BigNumber.from(response.toString())
-                if (amount.gte(contractEntity.min)) {
+                const response = await axios.post(`https://api-staging.starton.io/v2/smart-contract/${contractEntity.network}/${contractEntity.address}/read`, {
+                    functionName: "balanceOf",
+                    params: params,
+                }, {
+                    headers: {
+                        "x-api-key": await this.getApiKey(member.guildId)
+                    }
+                })
+
+
+                const amount = parseInt(response.data.response.raw)
+                console.log("amount", amount)
+                console.log("response.data", response.data)
+
+                if (amount >= contractEntity.min) {
                     const guild = await Discord.Client.guilds.fetch(contractEntity.guildId)
                     const discordUser = await guild?.members.fetch(member.memberId)
                     discordUser?.roles.add(contractEntity.role)

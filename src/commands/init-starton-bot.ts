@@ -3,6 +3,7 @@ import {Discord, Slash, SlashOption} from "discordx"
 import {getConnection} from "typeorm"
 import { Discord as DiscordClass } from "../discord"
 import {Guild} from "../entity/guild.entity"
+import {Starton} from "../starton";
 
 @Discord()
 abstract class InitStartonBot {
@@ -28,14 +29,23 @@ abstract class InitStartonBot {
         if (existingGuild) {
             return interaction.editReply(`This bot is already configured`)
         }
-        await guildRepo.save({
-            guildId: interaction?.guildId as string,
-            apiKey: key,
-            administratorRole: administratorRole.id
-        }).catch(err => {
+        try {
+            await Starton.verifyApiKey(key)
+        } catch (e) {
+            return interaction.editReply(`This api key is incorrect`)
+        }
+
+        try {
+            await guildRepo.save({
+                guildId: interaction?.guildId as string,
+                apiKey: key,
+                administratorRole: administratorRole.id
+            })
+        } catch(err) {
             console.error(err)
             return interaction.editReply(`Could not register your discord serve, please try again later`)
-        })
+        }
+
         await DiscordClass.Client.initApplicationPermissions()
         await interaction.editReply(`Discord server registered!`)
     }

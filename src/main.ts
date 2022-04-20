@@ -4,7 +4,7 @@ import {Link} from "./entity/link.entity"
 import {ethers} from "ethers"
 import {createConnection, getConnection} from "typeorm"
 import {Discord} from "./discord"
-import {StartonRole} from "./role"
+import {Starton} from "./starton"
 import {Member} from "./entity/member.entity"
 import { join } from "path"
 const cors = require('cors')
@@ -32,7 +32,6 @@ createConnection({
 }).then(async connection => {
 
     await Discord.start()
-    await StartonRole.start()
 
     app.post("/verify/:id", async(req: Request, res: Response) => {
         if (!req.body.signature) {
@@ -56,7 +55,7 @@ createConnection({
             guildId: link.guildId,
             address: address
         })
-        await StartonRole.assignRolesToMember(member)
+        await Starton.assignRolesToMember(member)
 
         return res.json({
             result: "ok"

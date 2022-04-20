@@ -3,15 +3,16 @@ import {Discord, Permission, Slash, SlashChoice, SlashGroup, SlashOption} from "
 import {getConnection} from "typeorm"
 import {Contract} from "../entity/contract.entity"
 import {Network, Type} from "../interface/global"
-import {StartonRole} from "../role"
+import {Starton} from "../starton"
 import {Guild} from "../entity/guild.entity"
+import * as Net from "net";
 
 @Discord()
 @SlashGroup("addtoken", "Manage your smart contract")
 abstract class RegisterToken {
 
     /**
-     * TODO DEBUG PERMISSION
+     * TODO OPTIMIZE PERMISSION
      * Then refactor this file
      */
     // @Permission(false) // We will enable command for specific users/roles only, so disable it for everyone
@@ -31,15 +32,15 @@ abstract class RegisterToken {
     @Slash("erc721")
 	private async addErc721(
 
-        @SlashChoice("Ethereum Mainnet", "ETHEREUM_MAINNET")
-        @SlashChoice("Ethereum Ropsten", "ETHEREUM_ROPSTEN")
-        @SlashChoice("Ethereum Goerli", "ETHEREUM_GOERLI")
-        @SlashChoice("Avalanche Mainnet", "AVALANCHE_MAINNET")
-        @SlashChoice("Avalanche Fuji", "AVALANCHE_FUJI")
-        @SlashChoice("Polygon Mainnet", "POLYGON_MAINNET")
-        @SlashChoice("Polygon Mumbai", "POLYGON_MUMBAI")
-        @SlashChoice("Binance Mainnet", "BINANCE_MAINNET")
-        @SlashChoice("Binance Testnet", "BINANCE_TESTNET")
+        @SlashChoice("Ethereum Mainnet", Network.ETHEREUM_MAINNET)
+        @SlashChoice("Ethereum Ropsten", Network.ETHEREUM_ROPSTEN)
+        @SlashChoice("Ethereum Goerli", Network.ETHEREUM_GOERLI)
+        @SlashChoice("Avalanche Mainnet", Network.AVALANCHE_MAINNET)
+        @SlashChoice("Avalanche Fuji", Network.AVALANCHE_FUJI)
+        @SlashChoice("Polygon Mainnet", Network.POLYGON_MAINNET)
+        @SlashChoice("Polygon Mumbai", Network.POLYGON_MUMBAI)
+        @SlashChoice("Binance Mainnet", Network.BINANCE_MAINNET)
+        @SlashChoice("Binance Testnet", Network.BINANCE_TESTNET)
         @SlashOption("network", { description: "Choose the network?", required: true })
             network: Network,
 
@@ -65,7 +66,7 @@ abstract class RegisterToken {
             }
         })
         /**
-         * TODO DEBUG PERMISSION AND REMOVE THIS PART
+         * TODO OPTIMIZE PERMISSION AND REMOVE THIS PART
          */
         if (guildEntity && guildEntity.administratorRole) {
             // @ts-ignore
@@ -85,25 +86,37 @@ abstract class RegisterToken {
         }
 
         /**
+         * Add contract inside starton
+         */
+        try {
+            await Starton.registerContract(interaction?.guildId as string, Type.ERC721, network, address)
+        } catch (err) {
+            return interaction.editReply(`Could not register this contract, please try again later`)
+        }
+
+        /**
          * Try to save the contract
          */
+        let contract
         const contractRepo = getConnection().getRepository(Contract)
-        const contract = await contractRepo.save({
-            guildId: interaction?.guildId as string,
-            address: address,
-            role: role.id,
-            type: Type.ERC721,
-            min,
-            network
-        }).catch(err => {
+        try {
+            contract = await contractRepo.save({
+                guildId: interaction?.guildId as string,
+                address: address,
+                role: role.id,
+                type: Type.ERC721,
+                min,
+                network
+            })
+        } catch (err) {
             console.error(err)
             return interaction.editReply(`Could not register this contract, please try again later`)
-        })
+        }
 
         /**
          * TODO Add a watcher on starton connect
          */
-        await StartonRole.assignRoleToAllMembers(contract as Contract)
+        await Starton.assignRoleToAllMembers(contract as Contract)
         await interaction.editReply(`Contract registered! Now user with a ${Type.ERC721} token on ${network} will get the role ${role}`)
     }
 
@@ -145,7 +158,7 @@ abstract class RegisterToken {
             }
         })
         /**
-         * TODO DEBUG PERMISSION AND REMOVE THIS PART
+         * TODO OPTIMIZE PERMISSION AND REMOVE THIS PART
          */
         if (guildEntity && guildEntity.administratorRole) {
             // @ts-ignore
@@ -162,6 +175,15 @@ abstract class RegisterToken {
                 content: "You must include a valid address :white_check_mark:",
                 ephemeral: true
             })
+        }
+
+        /**
+         * Add contract inside starton
+         */
+        try {
+            await Starton.registerContract(interaction?.guildId as string, Type.ERC20, network, address)
+        } catch (err) {
+            return interaction.editReply(`Could not register this contract, please try again later`)
         }
 
         /**
@@ -183,7 +205,7 @@ abstract class RegisterToken {
         /**
          * TODO Add a watcher on starton connect
          */
-        await StartonRole.assignRoleToAllMembers(contract as Contract)
+        await Starton.assignRoleToAllMembers(contract as Contract)
         await interaction.editReply(`Contract registered! Now user with a ${Type.ERC20} token on ${network} will get the role ${role}`)
     }
 
@@ -227,7 +249,7 @@ abstract class RegisterToken {
             }
         })
         /**
-         * TODO DEBUG PERMISSION AND REMOVE THIS PART
+         * TODO OPTIMIZE PERMISSION AND REMOVE THIS PART
          */
         if (guildEntity && guildEntity.administratorRole) {
             // @ts-ignore
@@ -244,6 +266,15 @@ abstract class RegisterToken {
                 content: "You must include a valid address :white_check_mark:",
                 ephemeral: true
             })
+        }
+
+        /**
+         * Add contract inside starton
+         */
+        try {
+            await Starton.registerContract(interaction?.guildId as string, Type.ERC1155, network, address)
+        } catch (err) {
+            return interaction.editReply(`Could not register this contract, please try again later`)
         }
 
         /**
@@ -266,7 +297,7 @@ abstract class RegisterToken {
         /**
          * TODO Add a watcher on starton connect
          */
-        await StartonRole.assignRoleToAllMembers(contract as Contract)
+        await Starton.assignRoleToAllMembers(contract as Contract)
         await interaction.editReply(`Contract registered! Now user with a ${Type.ERC20} token on ${network} will get the role ${role}`)
     }
 
