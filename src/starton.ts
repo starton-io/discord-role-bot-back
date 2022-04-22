@@ -22,13 +22,15 @@ export class Starton {
 
 	static async regenerateSigningKey(apiKey: string) {
 		const response = await axios
-			.post(process.env.BACK_URL + "webhook/signing-secret/regenerate",
-			{},
-			{
-				headers: {
-					"x-api-key": apiKey,
+			.post(
+				process.env.BACK_URL + "webhook/signing-secret/regenerate",
+				{},
+				{
+					headers: {
+						"x-api-key": apiKey,
+					},
 				},
-			})
+			)
 			.catch((err) => {
 				console.log(err)
 			})

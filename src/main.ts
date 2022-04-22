@@ -61,7 +61,7 @@ createConnection({
 	})
 
 	app.post("/hook/:id", async (req: Request, res: Response) => {
-        const hash = createHmac("sha256", process.env.STARTON_SIGNATURE_KEY as string)
+		const hash = createHmac("sha256", process.env.STARTON_SIGNATURE_KEY as string)
 			.update(JSON.stringify(req))
 			.digest("hex")
 
@@ -69,33 +69,33 @@ createConnection({
 			return
 		}
 
-        try {
-            const triggerRepo = getConnection().getRepository(Trigger)
-            const trigger = await triggerRepo.findOneOrFail({
-                where: {
-                    id: req.params.id,
-                },
-            })
-            
-            const contractRepo = getConnection().getRepository(Contract)
-            const contract = await contractRepo.findOneOrFail({
-                where: {
-                    address: trigger.contractId,
-                },
-            })
-    
-            const memberRepo = getConnection().getRepository(Member)
-            const members = await memberRepo.find()
-    
-            for (const member of members) {
-                if ( false ) { //TODO From or To addresses match the one of a member
-                    Starton.updateMemberRole(contract, trigger, member)
-                }
-            }
-        } catch (err) {
-            console.log(err)
-        }
+		try {
+			const triggerRepo = getConnection().getRepository(Trigger)
+			const trigger = await triggerRepo.findOneOrFail({
+				where: {
+					id: req.params.id,
+				},
+			})
 
+			const contractRepo = getConnection().getRepository(Contract)
+			const contract = await contractRepo.findOneOrFail({
+				where: {
+					address: trigger.contractId,
+				},
+			})
+
+			const memberRepo = getConnection().getRepository(Member)
+			const members = await memberRepo.find()
+
+			for (const member of members) {
+				if (false) {
+					//TODO From or To addresses match the one of a member
+					Starton.updateMemberRole(contract, trigger, member)
+				}
+			}
+		} catch (err) {
+			console.log(err)
+		}
 	})
 
 	// start express server
