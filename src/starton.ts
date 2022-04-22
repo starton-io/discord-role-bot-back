@@ -5,7 +5,7 @@ import { Contract } from "./entity/contract.entity"
 import { Discord } from "./discord"
 import { Member } from "./entity/member.entity"
 import axios from "axios"
-import abi from "./config/abi"
+import abi from "./interface/abi"
 import { Guild } from "./entity/guild.entity"
 import { Trigger } from "./entity/trigger.entity"
 

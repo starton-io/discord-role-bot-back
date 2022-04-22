@@ -2,10 +2,11 @@ import { ApplicationCommandPermissions, CommandInteraction, Role } from "discord
 import { Discord, Permission, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
 import { Contract } from "../entity/contract.entity"
-import { Network, Type, watcherTypes } from "../interface/global"
+import { Type } from "../interface/global"
 import { Starton } from "../starton"
 import { Guild } from "../entity/guild.entity"
 import { Trigger } from "../entity/trigger.entity"
+import watchers from "../interface/watchers"
 
 @Discord()
 @SlashGroup("trigger", "Manage your triggers")
@@ -77,7 +78,7 @@ abstract class TriggerCommand {
 				tokenId,
 			})
 
-			for (const watcherType of watcherTypes[contract.type]) {
+			for (const watcherType of watchers[contract.type]) {
 				const watcher = await Starton.createWatcher(
 					contract as Contract,
 					trigger.id,

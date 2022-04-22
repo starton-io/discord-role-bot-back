@@ -18,9 +18,3 @@ export enum Network {
 	AVALANCHE_FUJI = "avalanche-fuji",
 	AVALANCHE_MAINNET = "avalanche-mainnet",
 }
-
-export const watcherTypes = {
-	ERC20: ["EVENT_TRANSFER"],
-	ERC721: ["ERC721_EVENT_TRANSFER"],
-	ERC1155: ["ERC1155_EVENT_TRANSFER_SINGLE", "ERC1155_EVENT_TRANSFER_BATCH"],
-}
