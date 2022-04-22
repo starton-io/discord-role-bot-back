@@ -6,7 +6,7 @@ import { Type } from "../interface/global"
 import { Starton } from "../starton"
 import { Guild } from "../entity/guild.entity"
 import { Trigger } from "../entity/trigger.entity"
-import watchers from "../interface/watchers"
+import watchers from "../interface/watcher"
 
 @Discord()
 @SlashGroup("trigger", "Manage your triggers")
