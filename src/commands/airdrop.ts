@@ -24,15 +24,15 @@ abstract class AirdropCommand {
 		@SlashOption("name", { required: true, description: "Name of the airdrop" })
 		name: string,
 
-		@SlashOption("contract-id", {
+		@SlashOption("contract", {
 			required: true,
-			description: "Id of the contract you want to link to this airdrop",
+			description: "ID of the contract you want to link to this airdrop",
 		})
 		contractId: string,
 
 		@SlashOption("amount", {
 			required: false,
-			description: "Amount of tokens you want to aidrop. Default 1",
+			description: "Amount of tokens you want to aidrop. (Default 1)",
 		})
 		amount: number,
 
@@ -43,25 +43,25 @@ abstract class AirdropCommand {
 		})
 		channel: GuildChannel,
 
-		@SlashOption("token-id", { required: false, description: "Token ID (ERC1155)" })
+		@SlashOption("token", { required: false, description: "Token ID (for ERC-1155)" })
 		tokenId: string,
 
 		@SlashOption("password", {
 			required: false,
-			description: "Password needed to participate to the airdrop. Default none",
+			description: "Password needed to participate to the airdrop. (Default none)",
 		})
 		password: string,
 
 		@SlashOption("interval", {
 			required: false,
 			description:
-				"How many seconds before the user can participate again. Default -1 for only one participation",
+				"How many seconds before the user can participate again. (Default -1 for only one participation)",
 		})
 		interval: number,
 
 		@SlashOption("chance", {
 			required: false,
-			description: "Percentage of chance that the user will receive the airdrop. Default 100",
+			description: "Percentage of chance that the user will receive the airdrop. (Default 100)",
 		})
 		chance: number,
 
@@ -114,8 +114,11 @@ abstract class AirdropCommand {
 
 	@Slash("delete")
 	private async deleteAirdrop(
-		@SlashOption("id", { required: true, description: "ID of the airdrop you want to delete" })
-		id: string,
+		@SlashOption("airdrop", {
+			required: true,
+			description: "ID of the airdrop you want to delete",
+		})
+		airdropId: string,
 
 		interaction: CommandInteraction,
 	) {
@@ -123,12 +126,10 @@ abstract class AirdropCommand {
 
 		try {
 			const airdropRepo = getConnection().getRepository(Airdrop)
-			const airdrop = await airdropRepo.findOneOrFail({ where: { id } })
+			const airdrop = await airdropRepo.findOneOrFail({ where: { id: airdropId } })
 
 			const participationRepo = getConnection().getRepository(Participation)
-			const participations = await participationRepo.find({
-				where: { airdropId: airdrop.id },
-			})
+			const participations = await participationRepo.find({ where: { airdropId } })
 			for (const participation of participations) {
 				await participationRepo.delete(participation)
 			}

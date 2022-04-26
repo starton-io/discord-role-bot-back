@@ -15,8 +15,8 @@ export class Event {
 	password: string
 
 	@Column()
-	channelId: string
-
-	@Column()
 	roleId: string
+
+	@Column({ nullable: true })
+	channelId?: string
 }

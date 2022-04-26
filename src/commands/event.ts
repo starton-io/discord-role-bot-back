@@ -75,39 +75,37 @@ abstract class EventCommand {
 		@SlashOption("channel", {
 			type: "CHANNEL",
 			required: false,
-			description: "Channel you want to use for the event",
+			description: "Channel you want to use for this event",
 		})
 		channel: GuildChannel,
 
-		@SlashOption("channel-name", {
+		@SlashOption("new-channel", {
 			required: false,
 			description:
-				"Name of the channel you want to create for the event (not used if channel is given)",
+				"Name of the channel you want to create for this event (not used if channel is given)",
 		})
-		channelName: string,
+		newChannel: string,
 
 		@SlashOption("role", {
 			type: "ROLE",
 			required: false,
-			description: "Role you want to use for the event",
+			description: "Role you want to use for this event",
 		})
 		role: Role,
 
-		@SlashOption("role-name", {
+		@SlashOption("new-role", {
 			required: false,
 			description:
-				"Name of the channel you want to create for the event (not used if role is given)",
+				"Name of the role you want to create for this event (not used if role is given)",
 		})
-		roleName: string,
+		newRole: string,
 
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		if (!channel && !channelName) {
-			return await interaction.editReply(`You must provide a channel or a channel name`)
-		} else if (!role && !roleName) {
-			return await interaction.editReply(`You must provide a role or a role name`)
+		if (!role && !newRole) {
+			return await interaction.editReply(`You must provide a role (an existing or a new one)`)
 		}
 
 		try {
@@ -123,25 +121,22 @@ abstract class EventCommand {
 			}
 
 			if (!role) {
-				role = (await interaction.guild?.roles.create({ name: roleName })) as Role
+				role = (await interaction.guild?.roles.create({ name: newRole })) as Role
 				if (!role) {
 					throw "Couldn't create role"
 				}
 			}
-			if (!channel) {
-				channel = await this.createChannel(interaction.guild as Guild, channelName, role.id)
-				if (!channel) {
-					throw "Couldn't create channel"
-				}
-			} else {
+			if (channel) {
 				await this.updateChannel(channel, role)
+			} else if (!channel && newChannel) {
+				channel = await this.createChannel(interaction.guild as Guild, newChannel, role.id)
 			}
 
 			await eventRepo.save({
 				name,
 				guildId: interaction?.guildId as string,
 				password: password,
-				channelId: channel.id,
+				channelId: channel?.id,
 				roleId: role.id,
 			})
 			await interaction.editReply(`Event created`)
@@ -178,13 +173,13 @@ abstract class EventCommand {
 
 		@SlashOption("delete-channel", {
 			required: false,
-			description: "Do you want to delete the channel linked to this event ?",
+			description: "Do you want to delete the channel linked to this event ? Default: False",
 		})
 		deleteChannel: boolean = false,
 
 		@SlashOption("delete-role", {
 			required: false,
-			description: "Do you want to delete the role linked to this event ?",
+			description: "Do you want to delete the role linked to this event ? Default: False",
 		})
 		deleteRole: boolean = false,
 
@@ -201,7 +196,7 @@ abstract class EventCommand {
 				},
 			})
 
-			if (deleteChannel) {
+			if (deleteChannel && event.channelId) {
 				await interaction.guild?.channels.cache
 					.get(event.channelId)
 					?.delete()
@@ -252,7 +247,7 @@ abstract class JoinCommand {
 
 			member.roles.add(event.roleId)
 			await interaction.editReply(
-				`You joined the ${event.name} event, enjoin your new privileges !`,
+				`You joined the ${event.name} event, enjoy your new privileges !`,
 			)
 		} catch (e) {
 			console.log(e)

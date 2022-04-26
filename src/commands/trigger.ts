@@ -23,26 +23,26 @@ import watchers from "../interface/watcher"
 abstract class TriggerCommand {
 	@Slash("create")
 	private async createTrigger(
-		@SlashOption("contract-id", {
+		@SlashOption("contract", {
 			required: true,
-			description: "The id of the contract you want to link the trigger to",
+			description: "ID of the contract you want to link the trigger to",
 		})
 		contractId: string,
 
 		@SlashOption("role", {
 			type: "ROLE",
 			required: true,
-			description: "Role you want to give",
+			description: "Role you want to be given",
 		})
 		role: Role,
 
-		@SlashOption("min", { description: "Minimum amount of token required" })
+		@SlashOption("min", { description: "Minimum amount of token required. (Default 1)" })
 		min: number,
 
-		@SlashOption("max", { description: "Maximum amount of token required" })
+		@SlashOption("max", { description: "Maximum amount of token required. (Default none)" })
 		max: number,
 
-		@SlashOption("token-id", { description: "The ERC1155 token id" })
+		@SlashOption("token", { description: "Token ID (for ERC-1155)" })
 		tokenId: string,
 
 		interaction: CommandInteraction,
@@ -54,7 +54,7 @@ abstract class TriggerCommand {
 			const contract = await contractRepo.findOneOrFail({ where: { id: contractId } })
 
 			if (contract.type === Type.ERC1155 && !tokenId) {
-				return await interaction.editReply(`You must fill the tokenId field for an ERC1155`)
+				return await interaction.editReply(`You must fill the token field for an ERC-1155`)
 			}
 
 			const triggerRepo = getConnection().getRepository(Trigger)
@@ -91,9 +91,9 @@ abstract class TriggerCommand {
 
 	@Slash("list")
 	private async listTriggers(
-		@SlashOption("contract-id", {
+		@SlashOption("contract", {
 			required: true,
-			description: "The id of the contract you want to see the triggers",
+			description: "ID of the contract you want to see the triggers",
 		})
 		contractId: string,
 
@@ -122,8 +122,11 @@ abstract class TriggerCommand {
 
 	@Slash("delete")
 	private async deleteTrigger(
-		@SlashOption("id", { required: true, description: "ID of the trigger you want to delete" })
-		id: string,
+		@SlashOption("trigger", {
+			required: true,
+			description: "ID of the trigger you want to delete",
+		})
+		triggerId: string,
 
 		interaction: CommandInteraction,
 	) {
@@ -132,9 +135,11 @@ abstract class TriggerCommand {
 		try {
 			const triggerRepo = getConnection().getRepository(Trigger)
 
-			const trigger = await triggerRepo.findOne({ where: { id } })
+			const trigger = await triggerRepo.findOne({ where: { id: triggerId } })
 			if (!trigger)
-				return await interaction.editReply(`Could not find this trigger, please try again later`)
+				return await interaction.editReply(
+					`Could not find this trigger, please try again later`,
+				)
 
 			await triggerRepo.delete(trigger)
 

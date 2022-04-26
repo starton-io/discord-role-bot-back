@@ -101,8 +101,11 @@ abstract class ContractCommand {
 
 	@Slash("delete")
 	private async deleteContract(
-		@SlashOption("id", { required: true, description: "ID of the contract you want to delete" })
-		id: string,
+		@SlashOption("contract", {
+			required: true,
+			description: "ID of the contract you want to delete",
+		})
+		contractId: string,
 
 		interaction: CommandInteraction,
 	) {
@@ -110,7 +113,7 @@ abstract class ContractCommand {
 
 		try {
 			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOneOrFail({ where: { id } })
+			const contract = await contractRepo.findOneOrFail({ where: { id: contractId } })
 			await contractRepo.delete(contract)
 
 			await interaction.editReply(`Contract ${contract.name} deleted.`)
