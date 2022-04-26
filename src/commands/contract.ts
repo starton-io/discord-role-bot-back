@@ -10,11 +10,8 @@ import { Guild } from "../entity/guild.entity"
 @Permission(false)
 @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
 	const guildRepo = getConnection().getRepository(Guild)
-	const guildEntity = await guildRepo.findOne({
-		where: {
-			guildId: guild.id,
-		},
-	})
+	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+
 	if (guildEntity && guildEntity.administratorRole) {
 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
 	}
@@ -50,12 +47,12 @@ abstract class ContractCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
-			return interaction.editReply("You must include a valid address :white_check_mark:")
+			return await interaction.editReply(
+				"You must include a valid address :white_check_mark:",
+			)
 		}
 
 		try {
@@ -70,15 +67,13 @@ abstract class ContractCommand {
 				`${name} : An ${type} contract hosted on ${network} with address ${address} and id ${contract.id} registered!`,
 			)
 		} catch (err) {
-			return interaction.editReply(`Could not register this contract, please try again later`)
+			await interaction.editReply(`Could not register this contract, please try again later`)
 		}
 	}
 
 	@Slash("list")
 	private async listContracts(interaction: CommandInteraction) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		const contractRepo = getConnection().getRepository(Contract)
 		const contracts = await contractRepo
@@ -91,7 +86,9 @@ abstract class ContractCommand {
 				console.error(err)
 			})
 		if (!contracts) {
-			return interaction.editReply(`Could not register this contract, please try again later`)
+			return await interaction.editReply(
+				`Could not register this contract, please try again later`,
+			)
 		}
 
 		const replies: String[] = []
@@ -100,12 +97,10 @@ abstract class ContractCommand {
 				`${contract.name} (${contract.id}) : An ${contract.type} contract hosted on ${contract.network} with address ${contract.address}.`,
 			)
 		})
-
-		if (contracts.length) {
-			await interaction.editReply(replies.join("\n"))
-		} else {
-			await interaction.editReply("You don't have imported contracts yet")
+		if (!contracts.length) {
+			return await interaction.editReply("You don't have any contracts yet")
 		}
+		await interaction.editReply(replies.join("\n"))
 	}
 
 	@Slash("delete")
@@ -115,9 +110,7 @@ abstract class ContractCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
 			const contractRepo = getConnection().getRepository(Contract)
@@ -131,7 +124,7 @@ abstract class ContractCommand {
 
 			await interaction.editReply(`Contract ${contract.name} deleted.`)
 		} catch (err) {
-			return interaction.editReply(`Could not delete this contract, please try again later`)
+			await interaction.editReply(`Could not delete this contract, please try again later`)
 		}
 	}
 }

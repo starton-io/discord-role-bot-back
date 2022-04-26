@@ -20,20 +20,19 @@ abstract class InitStartonBotCommand {
 		administratorRole: Role,
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
-		const guildRepo = getConnection().getRepository(Guild)
-		const existingGuild = await guildRepo.findOne({
-			where: {
-				guildId: interaction.guildId,
-			},
-		})
-		if (existingGuild) {
-			return interaction.editReply(`This bot is already configured`)
-		}
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
+			const guildRepo = getConnection().getRepository(Guild)
+			const existingGuild = await guildRepo.findOne({
+				where: {
+					guildId: interaction.guildId,
+				},
+			})
+			if (existingGuild) {
+				return await interaction.editReply(`This bot is already configured`)
+			}
+
 			const signingKey = await Starton.getSigningKey(apiKey)
 			if (!signingKey) {
 				throw "Coudl't retrieve signing key"
@@ -44,11 +43,9 @@ abstract class InitStartonBotCommand {
 				apiKey: apiKey,
 				signingKey: signingKey,
 			})
-		} catch (err) {
-			console.log(err)
-			return interaction.editReply(
-				`Could not register your discord serve, please try again later`,
-			)
+		} catch (e) {
+			console.log(e)
+			return await interaction.editReply(`Could not init the bot, please try again later`)
 		}
 		await Discord.Client.initApplicationPermissions()
 		await interaction.editReply(`Discord server registered!`)
@@ -59,11 +56,8 @@ abstract class InitStartonBotCommand {
 @Permission(false)
 @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
 	const guildRepo = getConnection().getRepository(Guild)
-	const guildEntity = await guildRepo.findOne({
-		where: {
-			guildId: guild.id,
-		},
-	})
+	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+
 	if (guildEntity && guildEntity.administratorRole) {
 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
 	}
@@ -77,37 +71,29 @@ abstract class ManageStartonBotCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
 			const guildRepo = getConnection().getRepository(Guild)
-			const guild = await guildRepo.findOneOrFail({
-				where: {
-					guildId: interaction.guildId,
-				},
-			})
+			const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
 
 			if (!(await Starton.getSigningKey(key))) {
 				throw "Could not get signing key"
 			}
 
 			guild.apiKey = key
-			guildRepo.save(guild)
+			await guildRepo.save(guild)
 
-			return interaction.editReply(`api-key updated`)
-		} catch (err) {
-			console.log(err)
-			return interaction.editReply(`Could not update api-key`)
+			await interaction.editReply(`api-key updated`)
+		} catch (e) {
+			console.log(e)
+			await interaction.editReply(`Could not update api-key`)
 		}
 	}
 
 	@Slash("update-signing-key")
 	private async updateSigningKey(interaction: CommandInteraction) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
 			const guildRepo = getConnection().getRepository(Guild)
@@ -125,10 +111,10 @@ abstract class ManageStartonBotCommand {
 			guild.signingKey = signingKey
 			await guildRepo.save(guild)
 
-			return interaction.editReply(`signing-key updated`)
-		} catch (err) {
-			console.log(err)
-			return interaction.editReply(`Could not update signing-key`)
+			await interaction.editReply(`signing-key updated`)
+		} catch (e) {
+			console.log(e)
+			await interaction.editReply(`Could not update signing-key`)
 		}
 	}
 }

@@ -6,7 +6,7 @@ export class Trigger {
 	id: string
 
 	@Column()
-	role: string
+	roleId: string
 
 	@Column()
 	contractId: string

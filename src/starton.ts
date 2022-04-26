@@ -147,13 +147,13 @@ export class Starton {
 				const guild = await Discord.Client.guilds.fetch(contract.guildId)
 				const discordMember = await guild.members.fetch(member.memberId)
 
-				discordMember.roles.add(trigger.role)
+				discordMember.roles.add(trigger.roleId)
 			} catch (err) {
 				console.log(err)
 			}
 
 			console.log(
-				`Role ${trigger.role} given to user ${member.memberId} (${
+				`Role ${trigger.roleId} given to user ${member.memberId} (${
 					member.address
 				}) with ${amount.toString()} ${contract.type} (${contract.address}) `,
 			)
@@ -203,18 +203,18 @@ export class Starton {
 			const discordMember = await guild.members.fetch(member.memberId)
 
 			if (amount.gte(trigger.min) && (!trigger.max || amount.lte(trigger.max))) {
-				discordMember.roles.add(trigger.role)
+				discordMember.roles.add(trigger.roleId)
 
 				console.log(
-					`Role ${trigger.role} given to user ${member.memberId} (${
+					`Role ${trigger.roleId} given to user ${member.memberId} (${
 						member.address
 					}) with ${amount.toString()} ${contract.type} (${contract.address}) `,
 				)
 			} else {
-				discordMember.roles.remove(trigger.role)
+				discordMember.roles.remove(trigger.roleId)
 
 				console.log(
-					`Role ${trigger.role} removed from user ${member.memberId} (${member.address})`,
+					`Role ${trigger.roleId} removed from user ${member.memberId} (${member.address})`,
 				)
 			}
 		} catch (err) {

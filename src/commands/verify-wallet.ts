@@ -7,9 +7,8 @@ import { Link } from "../entity/link.entity"
 abstract class VerifyWalletCommand {
 	@Slash("verify")
 	private async verify(interaction: CommandInteraction) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
+
 		const linkRepository = getConnection().getRepository(Link)
 		const link = await linkRepository.save({
 			memberId: interaction?.user.id,

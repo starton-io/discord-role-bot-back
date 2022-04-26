@@ -13,11 +13,8 @@ import watchers from "../interface/watcher"
 @Permission(false)
 @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
 	const guildRepo = getConnection().getRepository(Guild)
-	const guildEntity = await guildRepo.findOne({
-		where: {
-			guildId: guild.id,
-		},
-	})
+	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+
 	if (guildEntity && guildEntity.administratorRole) {
 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
 	}
@@ -50,29 +47,20 @@ abstract class TriggerCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
 			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOneOrFail({
-				where: {
-					id: contractId,
-				},
-			})
+			const contract = await contractRepo.findOneOrFail({ where: { id: contractId } })
 
-			if (
-				(contract.type === Type.ERC1155 && !tokenId) ||
-				(contract.type !== Type.ERC1155 && tokenId)
-			) {
-				return interaction.editReply(`You must fill the tokenId field for an ERC1155`)
+			if (contract.type === Type.ERC1155 && !tokenId) {
+				return await interaction.editReply(`You must fill the tokenId field for an ERC1155`)
 			}
 
 			const triggerRepo = getConnection().getRepository(Trigger)
 			const trigger = await triggerRepo.save({
 				contractId: contract.id,
-				role: role.id,
+				roleId: role.id,
 				min,
 				max,
 				tokenId,
@@ -95,9 +83,9 @@ abstract class TriggerCommand {
 			await interaction.editReply(
 				`Trigger created on ${contract.name} ! The role ${role.name} will be given to every users respecting the conditions`,
 			)
-		} catch (err) {
-			console.log(err)
-			return interaction.editReply(`Could not create this trigger, please try again later`)
+		} catch (e) {
+			console.log(e)
+			await interaction.editReply(`Could not create this trigger, please try again later`)
 		}
 	}
 
@@ -111,33 +99,25 @@ abstract class TriggerCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		const triggerRepo = getConnection().getRepository(Trigger)
-		const triggers = await triggerRepo.find({
-			where: {
-				contractId,
-			},
-		})
+		const triggers = await triggerRepo.find({ where: { contractId } })
 
 		const replies: String[] = []
 		triggers.forEach((trigger) => {
 			replies.push(
-				`This trigger (${trigger.id}) gives the role ${trigger.role} to the users that have > ${trigger.min}` +
+				`This trigger (${trigger.id}) gives the role ${trigger.roleId} to the users that have > ${trigger.min}` +
 					(trigger.max ? `and < ${trigger.max}` : "") +
 					" tokens" +
 					(trigger.tokenId ? ` with id ${trigger.tokenId}` : "") +
 					".",
 			)
 		})
-
-		if (replies.length) {
-			await interaction.editReply(replies.join("\n"))
-		} else {
-			await interaction.editReply("You don't have no triggers on this contract")
+		if (!replies.length) {
+			return await interaction.editReply("You don't have any triggers yet")
 		}
+		return await interaction.editReply(replies.join("\n"))
 	}
 
 	@Slash("delete")
@@ -147,23 +127,20 @@ abstract class TriggerCommand {
 
 		interaction: CommandInteraction,
 	) {
-		await interaction.deferReply({
-			ephemeral: true,
-		})
+		await interaction.deferReply({ ephemeral: true })
 
 		try {
 			const triggerRepo = getConnection().getRepository(Trigger)
 
-			const trigger = await triggerRepo.findOneOrFail({
-				where: {
-					id,
-				},
-			})
+			const trigger = await triggerRepo.findOne({ where: { id } })
+			if (!trigger)
+				return interaction.editReply(`Could not find this trigger, please try again later`)
+
 			await triggerRepo.delete(trigger)
 
-			await interaction.editReply(`Trigger deleted.`)
-		} catch (err) {
-			return interaction.editReply(`Could not delete this trigger, please try again later`)
+			await interaction.editReply(`This trigger has been deleted.`)
+		} catch (e) {
+			await interaction.editReply(`Could not delete this trigger, please try again later`)
 		}
 	}
 }
