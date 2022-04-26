@@ -3,6 +3,7 @@ import {
 	CommandInteraction,
 	Guild,
 	GuildChannel,
+	GuildMember,
 	Role,
 } from "discord.js"
 import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
@@ -104,9 +105,9 @@ abstract class EventCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		if (!channel && !channelName) {
-			return interaction.editReply(`You must provide a channel or a channel name`)
+			return await interaction.editReply(`You must provide a channel or a channel name`)
 		} else if (!role && !roleName) {
-			return interaction.editReply(`You must provide a role or a role name`)
+			return await interaction.editReply(`You must provide a role or a role name`)
 		}
 
 		try {
@@ -118,7 +119,7 @@ abstract class EventCommand {
 				},
 			})
 			if (existingEvent) {
-				return interaction.editReply(`An event with this password already exists`)
+				return await interaction.editReply(`An event with this password already exists`)
 			}
 
 			if (!role) {
@@ -221,6 +222,41 @@ abstract class EventCommand {
 			await interaction.editReply(`This event has been deleted.`)
 		} catch (err) {
 			await interaction.editReply(`Could not delete this event`)
+		}
+	}
+}
+
+@Discord()
+abstract class JoinEventCommand {
+	@Slash("join")
+	private async join(
+		@SlashOption("password", { required: true, description: "Password of the event" })
+		password: string,
+
+		interaction: CommandInteraction,
+	) {
+		await interaction.deferReply({ ephemeral: true })
+
+		try {
+			const eventRepo = getConnection().getRepository(Event)
+			const event = await eventRepo.findOneOrFail({
+				where: {
+					guildId: interaction?.guildId as string,
+					password: password,
+				},
+			})
+
+			const member = (await interaction.guild?.members.fetch(
+				interaction.member.user.id,
+			)) as GuildMember
+
+			member.roles.add(event.roleId)
+			await interaction.editReply(
+				`You joined the ${event.name} event, enjoin your new privileges !`,
+			)
+		} catch (e) {
+			console.log(e)
+			await interaction.editReply(`Couldn't join this event`)
 		}
 	}
 }

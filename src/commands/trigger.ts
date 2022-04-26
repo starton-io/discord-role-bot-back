@@ -134,7 +134,7 @@ abstract class TriggerCommand {
 
 			const trigger = await triggerRepo.findOne({ where: { id } })
 			if (!trigger)
-				return interaction.editReply(`Could not find this trigger, please try again later`)
+				return await interaction.editReply(`Could not find this trigger, please try again later`)
 
 			await triggerRepo.delete(trigger)
 
