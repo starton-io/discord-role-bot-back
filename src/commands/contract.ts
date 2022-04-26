@@ -1,9 +1,9 @@
 import { ApplicationCommandPermissions, CommandInteraction, Role } from "discord.js"
 import { Discord, Permission, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
-import { Contract } from "../entity/contract.entity"
 import { Network, Type } from "../interface/global"
 import { Starton } from "../starton"
+import { Contract } from "../entity/contract.entity"
 import { Guild } from "../entity/guild.entity"
 
 @Discord()
@@ -66,7 +66,7 @@ abstract class ContractCommand {
 			await interaction.editReply(
 				`${name} : An ${type} contract hosted on ${network} with address ${address} and id ${contract.id} registered!`,
 			)
-		} catch (err) {
+		} catch (e) {
 			await interaction.editReply(`Could not register this contract, please try again later`)
 		}
 	}
@@ -77,13 +77,9 @@ abstract class ContractCommand {
 
 		const contractRepo = getConnection().getRepository(Contract)
 		const contracts = await contractRepo
-			.find({
-				where: {
-					guildId: interaction?.guildId as string,
-				},
-			})
-			.catch((err) => {
-				console.error(err)
+			.find({ where: { guildId: interaction?.guildId as string } })
+			.catch((e) => {
+				console.error(e)
 			})
 		if (!contracts) {
 			return await interaction.editReply(
@@ -114,16 +110,11 @@ abstract class ContractCommand {
 
 		try {
 			const contractRepo = getConnection().getRepository(Contract)
-
-			const contract = await contractRepo.findOneOrFail({
-				where: {
-					id,
-				},
-			})
+			const contract = await contractRepo.findOneOrFail({ where: { id } })
 			await contractRepo.delete(contract)
 
 			await interaction.editReply(`Contract ${contract.name} deleted.`)
-		} catch (err) {
+		} catch (e) {
 			await interaction.editReply(`Could not delete this contract, please try again later`)
 		}
 	}

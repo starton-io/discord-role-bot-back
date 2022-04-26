@@ -75,7 +75,7 @@ abstract class EventCommand {
 		@SlashOption("channel", {
 			type: "CHANNEL",
 			required: false,
-			description: "Role you want to use foe the event",
+			description: "Channel you want to use for the event",
 		})
 		channel: GuildChannel,
 
@@ -89,7 +89,7 @@ abstract class EventCommand {
 		@SlashOption("role", {
 			type: "ROLE",
 			required: false,
-			description: "Role you want to use foe the event",
+			description: "Role you want to use for the event",
 		})
 		role: Role,
 
@@ -227,7 +227,7 @@ abstract class EventCommand {
 }
 
 @Discord()
-abstract class JoinEventCommand {
+abstract class JoinCommand {
 	@Slash("join")
 	private async join(
 		@SlashOption("password", { required: true, description: "Password of the event" })
