@@ -51,7 +51,7 @@ abstract class ContractCommand {
 
 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
 			return await interaction.editReply(
-				"You must include a valid address :white_check_mark:",
+				"You must provide a valid address :white_check_mark:",
 			)
 		}
 

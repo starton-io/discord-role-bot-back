@@ -7,7 +7,8 @@ import { Member } from "./entity/member.entity"
 import axios from "axios"
 import abi from "./interface/abi"
 import { Guild } from "./entity/guild.entity"
-import { Trigger } from "./entity/trigger.entity"
+import { RoleTrigger } from "./entity/role-trigger.entity"
+import { Airdrop } from "./entity/airdrop.entity"
 
 export class Starton {
 	static async getApiKey(guildId: string): Promise<string | undefined> {
@@ -82,6 +83,28 @@ export class Starton {
 		})
 	}
 
+	static async mintToken(contract: Contract, address: string, airdrop: Airdrop) {
+		let body
+
+		if (contract.type === Type.ERC721) {
+			body = { functionName: "safeMint", params: [address, airdrop.metadataUri] }
+		} else if (contract.type === Type.ERC20) {
+			body = { functionName: "mint", params: [address, airdrop.amount] }
+		} else if (contract.type === Type.ERC1155) {
+			body = { functionName: "mint", params: [address, airdrop.tokenId, airdrop.amount] }
+		}
+
+		await axios.post(
+			process.env.BACK_URL + `/smart-contract/${contract.address}/call`,
+			{ ...body, signerWallet: airdrop.signerWallet },
+			{
+				headers: {
+					"x-api-key": await this.getApiKey(contract.guildId),
+				},
+			},
+		)
+	}
+
 	static async createWatcher(contract: Contract, triggerId: string, watcherType: string) {
 		const response = await axios
 			.post(
@@ -108,7 +131,7 @@ export class Starton {
 
 	private static async getBalanceOf(
 		contract: Contract,
-		trigger: Trigger,
+		trigger: RoleTrigger,
 		member: Member,
 	): Promise<BigNumber> {
 		let params
@@ -139,7 +162,11 @@ export class Starton {
 		return BigNumber.from(response?.data.response.raw)
 	}
 
-	private static async assignRoleToMember(contract: Contract, trigger: Trigger, member: Member) {
+	private static async assignRoleToMember(
+		contract: Contract,
+		trigger: RoleTrigger,
+		member: Member,
+	) {
 		const amount = await this.getBalanceOf(contract, trigger, member)
 
 		if (amount.gte(trigger.min) && (!trigger.max || amount.lte(trigger.max))) {
@@ -162,7 +189,7 @@ export class Starton {
 
 	static async assignRolesToMember(member: Member) {
 		const contractRepo = getConnection().getRepository(Contract)
-		const triggerRepo = getConnection().getRepository(Trigger)
+		const triggerRepo = getConnection().getRepository(RoleTrigger)
 		const contracts = await contractRepo.find({
 			where: {
 				guildId: member.guildId,
@@ -182,7 +209,7 @@ export class Starton {
 		}
 	}
 
-	static async assignRoleToAllMembers(contract: Contract, trigger: Trigger) {
+	static async assignRoleToAllMembers(contract: Contract, trigger: RoleTrigger) {
 		const memberRepo = getConnection().getRepository(Member)
 		const members = await memberRepo.find({
 			where: {
@@ -195,7 +222,7 @@ export class Starton {
 		}
 	}
 
-	static async updateMemberRole(contract: Contract, trigger: Trigger, member: Member) {
+	static async updateMemberRole(contract: Contract, trigger: RoleTrigger, member: Member) {
 		const amount = await this.getBalanceOf(contract, trigger, member)
 
 		try {

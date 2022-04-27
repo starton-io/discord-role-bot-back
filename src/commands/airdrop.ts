@@ -5,6 +5,8 @@ import { Airdrop } from "../entity/airdrop.entity"
 import { Contract } from "../entity/contract.entity"
 import { Guild as GuildEntity } from "../entity/guild.entity"
 import { Participation } from "../entity/participation.entity"
+import { Type } from "../interface/global"
+import { Starton } from "../starton"
 
 @Discord()
 @Permission(false)
@@ -30,11 +32,23 @@ abstract class AirdropCommand {
 		})
 		contractId: string,
 
+		@SlashOption("signer", { required: true, description: "Address of the signer wallet" })
+		signerWallet: string,
+
 		@SlashOption("amount", {
 			required: false,
 			description: "Amount of tokens you want to aidrop. (Default 1)",
 		})
 		amount: number,
+
+		@SlashOption("metadata", { required: false, description: "Token metadata (for ERC-721)" })
+		metadataUri: string,
+
+		@SlashOption("token", { required: false, description: "Token ID (for ERC-1155)" })
+		tokenId: string,
+
+		@SlashOption("data", { required: false, description: "Token data (for ERC-1155)" })
+		data: string,
 
 		@SlashOption("channel", {
 			type: "CHANNEL",
@@ -42,9 +56,6 @@ abstract class AirdropCommand {
 			description: "Do the used need to be in a specific channel to participate ?",
 		})
 		channel: GuildChannel,
-
-		@SlashOption("token", { required: false, description: "Token ID (for ERC-1155)" })
-		tokenId: string,
 
 		@SlashOption("password", {
 			required: false,
@@ -61,7 +72,8 @@ abstract class AirdropCommand {
 
 		@SlashOption("chance", {
 			required: false,
-			description: "Percentage of chance that the user will receive the airdrop. (Default 100)",
+			description:
+				"Percentage of chance that the user will receive the airdrop. (Default 100)",
 		})
 		chance: number,
 
@@ -76,14 +88,27 @@ abstract class AirdropCommand {
 				return await interaction.editReply(`Couldn't find this contract`)
 			}
 
+			if (contract.type == Type.ERC1155 && !tokenId) {
+				return await interaction.editReply(
+					`You must provide a token ID for an ERC-1155 contract`,
+				)
+			} else if (contract.type == Type.ERC721 && !metadataUri) {
+				return await interaction.editReply(
+					`You must provide metadata for an ERC-721 contract`,
+				)
+			}
+
 			const airdropRepo = getConnection().getRepository(Airdrop)
 			await airdropRepo.save({
 				name,
 				guildId: interaction.guild?.id,
 				contractId: contract.id,
+				signerWallet,
 				amount,
-				password,
+				metadataUri,
 				tokenId,
+				data,
+				password,
 				channelId: channel?.id,
 				interval,
 				chance,
@@ -143,23 +168,79 @@ abstract class AirdropCommand {
 	}
 }
 
-// @Discord()
-// abstract class ParticipateCommand {
-// 	@Slash("airdrop")
-// 	private async participate(
-// 		@SlashOption("address", { required: true, description: "Your wallet address" })
-// 		address: string,
+@Discord()
+abstract class ClaimCommand {
+	private async airdrop(airdrop: Airdrop, address: string): Promise<string> {
+		try {
+			const contractRepo = getConnection().getRepository(Contract)
+			const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
 
-// 		interaction: CommandInteraction,
-// 	) {
-// 		await interaction.deferReply({ ephemeral: true })
+			// Starton.mintToken(contract, address, airdrop)
+		} catch (e) {
+			console.log(e)
+			return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
+		}
+		return `You participated to the ${airdrop.name} airdrop!`
+	}
 
-// 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
-// 			return await interaction.editReply(
-// 				"You must include a valid address :white_check_mark:",
-// 			)
-// 		}
+	@Slash("claim")
+	private async claim(
+		@SlashOption("address", { required: true, description: "Your wallet address" })
+		address: string,
 
-// 		await interaction.editReply(`Airdroped`)
-// 	}
-// }
+		@SlashOption("password", { required: false })
+		password: string,
+
+		interaction: CommandInteraction,
+	) {
+		await interaction.deferReply({ ephemeral: true })
+
+		// if (!address.match(/0x[a-fA-F0-9]{40}/)) {
+		// 	return await interaction.editReply(
+		// 		"You must provide a valid address :white_check_mark:",
+		// 	)
+		// }
+
+		const airdropRepo = getConnection().getRepository(Airdrop)
+		const participationRepo = getConnection().getRepository(Participation)
+		const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
+		const replies: string[] = []
+
+		for (const airdrop of airdrops) {
+			if (
+				(airdrop.channelId && airdrop.channelId !== interaction.channel?.id) ||
+				(airdrop.password && airdrop.password !== password) ||
+				(!airdrop.password && password)
+			)
+				continue
+
+			const participations = await participationRepo.find({
+				where: [
+					{ airdropId: airdrop.id, address },
+					{ airdropId: airdrop.id, memberId: interaction.member.user.id },
+				],
+			})
+
+			console.log(participations)
+			if (airdrop.interval === -1) {
+				//TODO intégrer interval
+				replies.push(
+					`You have already claimed this airdrop.` +
+						(airdrop.interval === -1 ? `` : ` Try again later !`),
+				)
+			} else {
+				if (airdrop.chance >= Math.floor(Math.random() * 101) + 0) {
+					replies.push(await this.airdrop(airdrop, address))
+					await participationRepo.save({
+						airdropId: airdrop.id,
+						memberId: interaction.member.user.id,
+						address,
+					})
+				} else {
+					replies.push("Unlucky") //TODO message
+				}
+			}
+		}
+		await interaction.editReply(replies.join("\n"))
+	}
+}

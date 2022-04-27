@@ -8,7 +8,7 @@ import { Contract } from "./entity/contract.entity"
 import { Member } from "./entity/member.entity"
 import { join } from "path"
 import { createHmac } from "crypto"
-import { Trigger } from "./entity/trigger.entity"
+import { RoleTrigger } from "./entity/role-trigger.entity"
 
 const cors = require("cors")
 require("dotenv").config()
@@ -70,7 +70,7 @@ createConnection({
 		}
 
 		try {
-			const triggerRepo = getConnection().getRepository(Trigger)
+			const triggerRepo = getConnection().getRepository(RoleTrigger)
 			const trigger = await triggerRepo.findOneOrFail({
 				where: {
 					id: req.params.id,

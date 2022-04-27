@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryColumn } from "typeorm"
 
 @Entity()
-export class Trigger {
+export class RoleTrigger {
 	@PrimaryColumn({ type: "uuid", generated: "uuid" })
 	id: string
 
@@ -17,6 +17,7 @@ export class Trigger {
 	@Column({ nullable: true })
 	max?: number
 
+	//Mandatory for a 1155 token
 	@Column({ nullable: true })
 	tokenId?: string
 }

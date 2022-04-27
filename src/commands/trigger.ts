@@ -5,7 +5,7 @@ import { Contract } from "../entity/contract.entity"
 import { Type } from "../interface/global"
 import { Starton } from "../starton"
 import { Guild } from "../entity/guild.entity"
-import { Trigger } from "../entity/trigger.entity"
+import { RoleTrigger } from "../entity/role-trigger.entity"
 import watchers from "../interface/watcher"
 
 @Discord()
@@ -57,7 +57,7 @@ abstract class TriggerCommand {
 				return await interaction.editReply(`You must fill the token field for an ERC-1155`)
 			}
 
-			const triggerRepo = getConnection().getRepository(Trigger)
+			const triggerRepo = getConnection().getRepository(RoleTrigger)
 			const trigger = await triggerRepo.save({
 				contractId: contract.id,
 				roleId: role.id,
@@ -101,7 +101,7 @@ abstract class TriggerCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		const triggerRepo = getConnection().getRepository(Trigger)
+		const triggerRepo = getConnection().getRepository(RoleTrigger)
 		const triggers = await triggerRepo.find({ where: { contractId } })
 
 		const replies: String[] = []
@@ -133,7 +133,7 @@ abstract class TriggerCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		try {
-			const triggerRepo = getConnection().getRepository(Trigger)
+			const triggerRepo = getConnection().getRepository(RoleTrigger)
 
 			const trigger = await triggerRepo.findOne({ where: { id: triggerId } })
 			if (!trigger)

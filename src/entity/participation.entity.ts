@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from "typeorm"
+import { Entity, Column, PrimaryColumn, CreateDateColumn } from "typeorm"
 
 @Entity()
 export class Participation {
@@ -11,6 +11,9 @@ export class Participation {
 	@Column()
 	memberId: string
 
-	@Column({ type: "date"})
-	date: Date
+	@Column()
+	address: string
+
+	@CreateDateColumn()
+	createdAt: Date;
 }
