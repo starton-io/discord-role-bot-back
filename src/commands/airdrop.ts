@@ -262,7 +262,7 @@ abstract class ClaimCommand {
 						})
 					} catch (e) {
 						console.log(e)
-						return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
+						replies.push(`Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`)
 					}
 				} else {
 					replies.push(
