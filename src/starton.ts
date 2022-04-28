@@ -9,6 +9,7 @@ import abi from "./interface/abi"
 import { Guild } from "./entity/guild.entity"
 import { RoleTrigger } from "./entity/role-trigger.entity"
 import { Airdrop } from "./entity/airdrop.entity"
+import confirmationsBlocks from "./interface/confirmations-blocks"
 
 export class Starton {
 	static async getApiKey(guildId: string): Promise<string | undefined> {
@@ -32,8 +33,8 @@ export class Starton {
 					},
 				},
 			)
-			.catch((err) => {
-				console.log(err)
+			.catch((e) => {
+				console.log(e)
 			})
 		return response?.data?.secret
 	}
@@ -45,8 +46,8 @@ export class Starton {
 					"x-api-key": apiKey,
 				},
 			})
-			.catch((err) => {
-				console.log(err)
+			.catch((e) => {
+				console.log(e)
 			})
 		return response?.data?.secret
 	}
@@ -59,7 +60,7 @@ export class Starton {
 		name: string,
 	): Promise<Contract> {
 		await axios.post(
-			process.env.BACK_URL + "/smart-contract/import-existing",
+			process.env.BACK_URL + "smart-contract/import-existing",
 			{
 				abi: abi[type],
 				network: network,
@@ -95,7 +96,7 @@ export class Starton {
 		}
 
 		await axios.post(
-			process.env.BACK_URL + `/smart-contract/${contract.address}/call`,
+			process.env.BACK_URL + `/smart-contract/${contract.network}/${contract.address}/call`,
 			{ ...body, signerWallet: airdrop.signerWallet },
 			{
 				headers: {
@@ -114,7 +115,7 @@ export class Starton {
 					network: contract.network,
 					type: watcherType,
 					webhookUrl: process.env.WEBHOOK_URL + "hook?id=" + triggerId,
-					confirmationsBlocks: 3,
+					confirmationsBlocks: confirmationsBlocks[contract.network],
 				},
 				{
 					headers: {
@@ -122,9 +123,9 @@ export class Starton {
 					},
 				},
 			)
-			.catch((err) => {
-				if (err.response.data.statusCode === 409) return { data: {} }
-				console.log(err.response.data)
+			.catch((e) => {
+				if (e.response.data.statusCode === 409) return { data: {} }
+				console.log(e.response.data)
 			})
 		return response?.data
 	}
@@ -145,7 +146,7 @@ export class Starton {
 		const response = await axios
 			.post(
 				process.env.BACK_URL +
-					`smart-contract/${contract.network}/${contract.address}/read`,
+					`/smart-contract/${contract.network}/${contract.address}/read`,
 				{
 					functionName: "balanceOf",
 					params,
@@ -156,8 +157,8 @@ export class Starton {
 					},
 				},
 			)
-			.catch((err) => {
-				console.log(err.response.data)
+			.catch((e) => {
+				console.log(e.response.data)
 			})
 		return BigNumber.from(response?.data.response.raw)
 	}
@@ -175,8 +176,8 @@ export class Starton {
 				const discordMember = await guild.members.fetch(member.memberId)
 
 				discordMember.roles.add(trigger.roleId)
-			} catch (err) {
-				console.log(err)
+			} catch (e) {
+				console.log(e)
 			}
 
 			console.log(
@@ -244,8 +245,8 @@ export class Starton {
 					`Role ${trigger.roleId} removed from user ${member.memberId} (${member.address})`,
 				)
 			}
-		} catch (err) {
-			console.log(err)
+		} catch (e) {
+			console.log(e)
 		}
 	}
 }

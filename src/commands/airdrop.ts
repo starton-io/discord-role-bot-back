@@ -175,7 +175,7 @@ abstract class ClaimCommand {
 			const contractRepo = getConnection().getRepository(Contract)
 			const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
 
-			// Starton.mintToken(contract, address, airdrop)
+			Starton.mintToken(contract, address, airdrop)
 		} catch (e) {
 			console.log(e)
 			return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
@@ -191,6 +191,13 @@ abstract class ClaimCommand {
 		return `${hours < 10 ? `0${hours}` : `${hours}`}:${
 			minutes < 10 ? `0${minutes}` : `${minutes}`
 		}:${seconds < 10 ? `0${seconds}` : `${seconds}`}`
+	}
+
+	private isUserAllowed(airdrop: Airdrop, password: string, channelId: string) {
+		return (
+			(!airdrop.channelId || airdrop.channelId === channelId) &&
+			(!airdrop.password || airdrop.password === password)
+		)
 	}
 
 	@Slash("claim")
@@ -211,58 +218,62 @@ abstract class ClaimCommand {
 			)
 		}
 
-		const airdropRepo = getConnection().getRepository(Airdrop)
-		const participationRepo = getConnection().getRepository(Participation)
-		const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
-		const replies: string[] = []
+		try {
+			const airdropRepo = getConnection().getRepository(Airdrop)
+			const participationRepo = getConnection().getRepository(Participation)
+			const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
+			const replies: string[] = []
 
-		for (const airdrop of airdrops) {
-			if (
-				(airdrop.channelId && airdrop.channelId !== interaction.channel?.id) ||
-				(airdrop.password && airdrop.password !== password) ||
-				(!airdrop.password && password)
-			)
-				continue
+			for (const airdrop of airdrops) {
+				if (!this.isUserAllowed(airdrop, password, interaction.channel?.id as string))
+					continue
 
-			const participations = await participationRepo.find({
-				where: [
-					{ airdropId: airdrop.id, address },
-					{ airdropId: airdrop.id, memberId: interaction.user.id },
-				],
-			})
+				const participations = await participationRepo.find({
+					where: [
+						{ airdropId: airdrop.id, address },
+						{ airdropId: airdrop.id, memberId: interaction.user.id },
+					],
+				})
 
-			const timeFromLastParticipation = participations.at(-1)
-				? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) / 1000
-				: 0
-			if (!participations.at(-1) || timeFromLastParticipation >= airdrop.interval) {
-				if (airdrop.chance >= Math.floor(Math.random() * 101)) {
-					replies.push(await this.airdrop(airdrop, address, interaction.user.id))
+				const timeFromLastParticipation = participations.at(-1)
+					? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) /
+					  1000
+					: 0
+				if (!participations.at(-1) || timeFromLastParticipation >= airdrop.interval) {
+					if (airdrop.chance >= Math.floor(Math.random() * 101)) {
+						replies.push(await this.airdrop(airdrop, address, interaction.user.id))
+					} else {
+						replies.push(
+							`Sorry <@${interaction.user.id}> you didn't win :cry:` +
+								(airdrop.interval === -1 || !participations.at(-1)
+									? ``
+									: ` Try again in ${this.formatTime(
+											airdrop.interval - timeFromLastParticipation,
+									  )} !`),
+						)
+					}
+					await participationRepo.save({
+						airdropId: airdrop.id,
+						memberId: interaction.user.id,
+						address,
+					})
 				} else {
 					replies.push(
-						`Sorry <@${interaction.user.id}> you didn't win :cry:` +
-							(airdrop.interval === -1 || !participations.at(-1)
+						`You have already claimed this airdrop.` +
+							(airdrop.interval === -1
 								? ``
 								: ` Try again in ${this.formatTime(
 										airdrop.interval - timeFromLastParticipation,
 								  )} !`),
 					)
 				}
-				await participationRepo.save({
-					airdropId: airdrop.id,
-					memberId: interaction.user.id,
-					address,
-				})
-			} else {
-				replies.push(
-					`You have already claimed this airdrop.` +
-						(airdrop.interval === -1
-							? ``
-							: ` Try again in ${this.formatTime(
-									airdrop.interval - timeFromLastParticipation,
-							  )} !`),
-				)
 			}
+			await interaction.editReply(replies.join("\n"))
+		} catch (e) {
+			console.log(e)
+			await interaction.editReply(
+				"Couldn't participate to the airdrops. Please try again later.",
+			)
 		}
-		await interaction.editReply(replies.join("\n"))
 	}
 }

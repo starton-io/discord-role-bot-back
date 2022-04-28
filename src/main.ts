@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express"
 import { Link } from "./entity/link.entity"
 import { ethers } from "ethers"
-import { createConnection, getConnection, Transaction } from "typeorm"
+import { createConnection, getConnection } from "typeorm"
 import { Discord } from "./discord"
 import { Starton } from "./starton"
 import { Contract } from "./entity/contract.entity"
@@ -9,6 +9,7 @@ import { Member } from "./entity/member.entity"
 import { join } from "path"
 import { createHmac } from "crypto"
 import { RoleTrigger } from "./entity/role-trigger.entity"
+import { Guild } from "./entity/guild.entity"
 
 const cors = require("cors")
 require("dotenv").config()
@@ -60,42 +61,60 @@ createConnection({
 		})
 	})
 
-	app.post("/hook/:id", async (req: Request, res: Response) => {
-		const hash = createHmac("sha256", process.env.STARTON_SIGNATURE_KEY as string)
-			.update(JSON.stringify(req))
-			.digest("hex")
-
-		if (hash !== req.headers["starton-signature"]) {
-			return
-		}
-
+	app.post("/hook", async (req: Request, res: Response) => {
 		try {
 			const triggerRepo = getConnection().getRepository(RoleTrigger)
 			const trigger = await triggerRepo.findOneOrFail({
 				where: {
-					id: req.params.id,
+					id: req.query.id,
 				},
 			})
 
 			const contractRepo = getConnection().getRepository(Contract)
 			const contract = await contractRepo.findOneOrFail({
 				where: {
-					address: trigger.contractId,
+					id: trigger.contractId,
 				},
 			})
+
+			const guildRepo = getConnection().getRepository(Guild)
+			const guild = await guildRepo.findOneOrFail({
+				where: {
+					guildId: contract.guildId,
+				},
+			})
+
+			const hash = createHmac("sha256", guild.signingKey)
+				.update(JSON.stringify(req.body))
+				.digest("hex")
+
+			if (hash !== req.headers["starton-signature"]) {
+				throw "Signature doen't match"
+			}
 
 			const memberRepo = getConnection().getRepository(Member)
 			const members = await memberRepo.find()
 
 			for (const member of members) {
-				if (false) {
-					//TODO From or To addresses match the one of a member
+				if (req.body.data.transfer && req.body.data.transfer.to === member.address) {
+					Starton.updateMemberRole(contract, trigger, member)
+				} else if (
+					req.body.data.transfer &&
+					req.body.data.transfer.from === member.address
+				) {
 					Starton.updateMemberRole(contract, trigger, member)
 				}
 			}
-		} catch (err) {
-			console.log(err)
+		} catch (e) {
+			console.log(req)
+			console.log(e)
+			return res.json({
+				result: "ko",
+			})
 		}
+		return res.json({
+			result: "ok",
+		})
 	})
 
 	// start express server
