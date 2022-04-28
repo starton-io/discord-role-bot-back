@@ -30,7 +30,11 @@ export class Discord {
 
 		this._client.once("ready", async () => {
 			await this._client.initApplicationCommands()
-			await this._client.initApplicationPermissions()
+			try {
+				await this._client.initApplicationPermissions()
+			} catch (e) {
+				console.log("Could not init application permissions", e)
+			}
 
 			console.log("Bot started")
 		})
