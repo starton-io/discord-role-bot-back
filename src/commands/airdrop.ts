@@ -170,7 +170,7 @@ abstract class AirdropCommand {
 
 @Discord()
 abstract class ClaimCommand {
-	private async airdrop(airdrop: Airdrop, address: string): Promise<string> {
+	private async airdrop(airdrop: Airdrop, address: string, userId: string): Promise<string> {
 		try {
 			const contractRepo = getConnection().getRepository(Contract)
 			const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
@@ -180,7 +180,17 @@ abstract class ClaimCommand {
 			console.log(e)
 			return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
 		}
-		return `You participated to the ${airdrop.name} airdrop!`
+		return `Congratulation <@${userId}> you WIN :rocket: :partying_face: :gift:`
+	}
+
+	private formatTime(time: number): string {
+		const hours = Math.floor(time / 3600)
+		const minutes = Math.floor((time % 3600) / 60)
+		const seconds = Math.floor(time % 60)
+
+		return `${hours < 10 ? `0${hours}` : `${hours}`}:${
+			minutes < 10 ? `0${minutes}` : `${minutes}`
+		}:${seconds < 10 ? `0${seconds}` : `${seconds}`}`
 	}
 
 	@Slash("claim")
@@ -195,11 +205,11 @@ abstract class ClaimCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		// if (!address.match(/0x[a-fA-F0-9]{40}/)) {
-		// 	return await interaction.editReply(
-		// 		"You must provide a valid address :white_check_mark:",
-		// 	)
-		// }
+		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
+			return await interaction.editReply(
+				"You must provide a valid address :white_check_mark:",
+			)
+		}
 
 		const airdropRepo = getConnection().getRepository(Airdrop)
 		const participationRepo = getConnection().getRepository(Participation)
@@ -217,28 +227,40 @@ abstract class ClaimCommand {
 			const participations = await participationRepo.find({
 				where: [
 					{ airdropId: airdrop.id, address },
-					{ airdropId: airdrop.id, memberId: interaction.member.user.id },
+					{ airdropId: airdrop.id, memberId: interaction.user.id },
 				],
 			})
 
-			console.log(participations)
-			if (airdrop.interval === -1) {
-				//TODO intégrer interval
+			const timeFromLastParticipation = participations.at(-1)
+				? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) / 1000
+				: 0
+			if (!participations.at(-1) || timeFromLastParticipation >= airdrop.interval) {
+				if (airdrop.chance >= Math.floor(Math.random() * 101)) {
+					replies.push(await this.airdrop(airdrop, address, interaction.user.id))
+				} else {
+					replies.push(
+						`Sorry <@${interaction.user.id}> you didn't win :cry:` +
+							(airdrop.interval === -1 || !participations.at(-1)
+								? ``
+								: ` Try again in ${this.formatTime(
+										airdrop.interval - timeFromLastParticipation,
+								  )} !`),
+					)
+				}
+				await participationRepo.save({
+					airdropId: airdrop.id,
+					memberId: interaction.user.id,
+					address,
+				})
+			} else {
 				replies.push(
 					`You have already claimed this airdrop.` +
-						(airdrop.interval === -1 ? `` : ` Try again later !`),
+						(airdrop.interval === -1
+							? ``
+							: ` Try again in ${this.formatTime(
+									airdrop.interval - timeFromLastParticipation,
+							  )} !`),
 				)
-			} else {
-				if (airdrop.chance >= Math.floor(Math.random() * 101) + 0) {
-					replies.push(await this.airdrop(airdrop, address))
-					await participationRepo.save({
-						airdropId: airdrop.id,
-						memberId: interaction.member.user.id,
-						address,
-					})
-				} else {
-					replies.push("Unlucky") //TODO message
-				}
 			}
 		}
 		await interaction.editReply(replies.join("\n"))
