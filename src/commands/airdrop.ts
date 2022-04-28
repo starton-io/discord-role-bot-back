@@ -22,7 +22,6 @@ import { Starton } from "../starton"
 @SlashGroup({ name: "airdrops", description: "Manage your airdrops" })
 @SlashGroup("airdrops")
 abstract class AirdropCommand {
-
 	@Slash("create")
 	private async createAirdrop(
 		@SlashOption("name", { required: true, description: "Name of the airdrop" })
@@ -130,7 +129,11 @@ abstract class AirdropCommand {
 
 		const replies: String[] = []
 		airdrops.forEach((airdrop) => {
-			replies.push(`${airdrop.name} : ${airdrop.id}`) //TODO add info
+			replies.push(
+				`${airdrop.name} (${airdrop.id}) | password : ${
+					airdrop.password ? airdrop.password : "none"
+				}.`,
+			)
 		})
 		if (!replies.length) {
 			return await interaction.editReply("You don't have any airdrops yet")
@@ -172,16 +175,11 @@ abstract class AirdropCommand {
 @Discord()
 abstract class ClaimCommand {
 	private async airdrop(airdrop: Airdrop, address: string, userId: string): Promise<string> {
-		try {
-			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
+		const contractRepo = getConnection().getRepository(Contract)
+		const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
 
-			await Starton.mintToken(contract, address, airdrop)
-		} catch (e) {
-			console.log(e)
-			return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
-		}
-		return `Congratulation <@${userId}> you won :rocket: :partying_face: :gift:`
+		const response = await Starton.mintToken(contract, address, airdrop)
+		return `Congratulation <@${userId}> you won :rocket: :partying_face: :gift:. You wan see your transaction on ${contract.network} with the transaction hash ${response.transactionHash}`
 	}
 
 	private formatTime(time: number): string {
@@ -242,26 +240,30 @@ abstract class ClaimCommand {
 					: 0
 				if (
 					!participations.at(-1) ||
-					(airdrop.interval !== -1 &&
-					timeFromLastParticipation >= airdrop.interval)
+					(airdrop.interval !== -1 && timeFromLastParticipation >= airdrop.interval)
 				) {
-					if (airdrop.chance >= Math.floor(Math.random() * 101)) {
-						replies.push(await this.airdrop(airdrop, address, interaction.user.id))
-					} else {
-						replies.push(
-							`Sorry <@${interaction.user.id}> you didn't win :cry:` +
-								(airdrop.interval === -1 || !participations.at(-1)
-									? ``
-									: ` Try again in ${this.formatTime(
-											airdrop.interval - timeFromLastParticipation,
-									  )} !`),
-						)
+					try {
+						if (airdrop.chance >= Math.floor(Math.random() * 101)) {
+							replies.push(await this.airdrop(airdrop, address, interaction.user.id))
+						} else {
+							replies.push(
+								`Sorry <@${interaction.user.id}> you didn't win :cry:` +
+									(airdrop.interval === -1 || !participations.at(-1)
+										? ``
+										: ` Try again in ${this.formatTime(
+												airdrop.interval - timeFromLastParticipation,
+										  )} !`),
+							)
+						}
+						await participationRepo.save({
+							airdropId: airdrop.id,
+							memberId: interaction.user.id,
+							address,
+						})
+					} catch (e) {
+						console.log(e)
+						return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
 					}
-					await participationRepo.save({
-						airdropId: airdrop.id,
-						memberId: interaction.user.id,
-						address,
-					})
 				} else {
 					replies.push(
 						`You have already claimed this airdrop.` +
