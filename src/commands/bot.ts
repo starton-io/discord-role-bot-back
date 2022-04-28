@@ -47,7 +47,12 @@ abstract class InitStartonBotCommand {
 			console.log(e)
 			return await interaction.editReply(`Could not init the bot, please try again later`)
 		}
-		await Discord.Client.initApplicationPermissions()
+
+		try {
+			await Discord.Client.initApplicationPermissions()
+		} catch (e) {
+			console.log("Could not init application permissions", e)
+		}
 		await interaction.editReply(`Discord server registered!`)
 	}
 }
