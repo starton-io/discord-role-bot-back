@@ -17,7 +17,8 @@ import { Guild } from "../entity/guild.entity"
 // 	}
 // 	return []
 // })
-@SlashGroup("contract", "Manage your triggers")
+@SlashGroup({ name: "contract", description: "Manage your triggers" })
+@SlashGroup("contract")
 abstract class ContractCommand {
 	@Slash("import")
 	private async createContract(

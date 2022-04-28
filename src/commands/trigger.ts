@@ -9,7 +9,6 @@ import { RoleTrigger } from "../entity/role-trigger.entity"
 import watchers from "../interface/watcher"
 
 @Discord()
-@SlashGroup("trigger", "Manage your triggers")
 // @Permission(false)
 // @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
 // 	const guildRepo = getConnection().getRepository(Guild)
@@ -20,6 +19,8 @@ import watchers from "../interface/watcher"
 // 	}
 // 	return []
 // })
+@SlashGroup({ name: "trigger", description: "Manage your triggers" })
+@SlashGroup("trigger")
 abstract class TriggerCommand {
 	@Slash("create")
 	private async createTrigger(

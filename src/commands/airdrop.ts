@@ -9,18 +9,20 @@ import { Type } from "../interface/global"
 import { Starton } from "../starton"
 
 @Discord()
-@Permission(false)
-@Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
-	const guildRepo = getConnection().getRepository(GuildEntity)
-	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
-
-	if (guildEntity && guildEntity.administratorRole) {
-		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
-	}
-	return []
-})
-@SlashGroup("airdrop", "Manage your airdrops")
+// @Permission(true)
+// @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
+// 	const guildRepo = getConnection().getRepository(GuildEntity)
+// 	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+//
+// 	if (guildEntity && guildEntity.administratorRole) {
+// 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
+// 	}
+// 	return []
+// })
+@SlashGroup({ name: "airdrops", description: "Manage your airdrops" })
+@SlashGroup("airdrops")
 abstract class AirdropCommand {
+
 	@Slash("create")
 	private async createAirdrop(
 		@SlashOption("name", { required: true, description: "Name of the airdrop" })

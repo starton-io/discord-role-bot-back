@@ -25,7 +25,7 @@ export class Discord {
 			// botGuilds: [
 			//     process.env.GUILD_ID as string
 			// ],
-			silent: true,
+			silent: false,
 		})
 
 		this._client.once("ready", async () => {

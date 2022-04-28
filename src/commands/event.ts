@@ -22,7 +22,8 @@ import { Guild as GuildEntity } from "../entity/guild.entity"
 // 	}
 // 	return []
 // })
-@SlashGroup("event", "Manage your events")
+@SlashGroup({ name: "event", description: "Manage your events" })
+@SlashGroup("event")
 abstract class EventCommand {
 	private async createChannel(guild: Guild, name: string, roleId: string): Promise<GuildChannel> {
 		const guildRepo = getConnection().getRepository(GuildEntity)
