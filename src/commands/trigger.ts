@@ -102,7 +102,10 @@ abstract class TriggerCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		const triggerRepo = getConnection().getRepository(RoleTrigger)
-		const triggers = await triggerRepo.find({ where: { contractId } })
+		const triggers = await triggerRepo.find({ where: { contractId } }).catch((e) => {
+			console.log(e)
+			return []
+		})
 
 		const replies: String[] = []
 		triggers.forEach((trigger) => {
@@ -136,10 +139,9 @@ abstract class TriggerCommand {
 			const triggerRepo = getConnection().getRepository(RoleTrigger)
 
 			const trigger = await triggerRepo.findOne({ where: { id: triggerId } })
-			if (!trigger)
-				return await interaction.editReply(
-					`Could not find this trigger, please try again later`,
-				)
+			if (!trigger) {
+				return await interaction.editReply(`Could not find this trigger`)
+			}
 
 			await triggerRepo.delete(trigger)
 

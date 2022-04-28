@@ -15,7 +15,7 @@ abstract class InitStartonBotCommand {
 		@SlashOption("administrator", {
 			type: "ROLE",
 			required: true,
-			description: "Role who can config this bot, add other smart contract etc.?",
+			description: "The role that can manage the bot",
 		})
 		administratorRole: Role,
 		interaction: CommandInteraction,
@@ -84,7 +84,7 @@ abstract class ManageStartonBotCommand {
 			guild.apiKey = key
 			await guildRepo.save(guild)
 
-			await interaction.editReply(`api-key updated`)
+			await interaction.editReply(`Api-key updated`)
 		} catch (e) {
 			console.log(e)
 			await interaction.editReply(`Could not update api-key`)
@@ -111,7 +111,7 @@ abstract class ManageStartonBotCommand {
 			guild.signingKey = signingKey
 			await guildRepo.save(guild)
 
-			await interaction.editReply(`signing-key updated`)
+			await interaction.editReply(`Signing-key updated`)
 		} catch (e) {
 			console.log(e)
 			await interaction.editReply(`Could not update signing-key`)

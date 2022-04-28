@@ -95,7 +95,7 @@ export class Starton {
 			body = { functionName: "mint", params: [address, airdrop.tokenId, airdrop.amount] }
 		}
 
-		await axios.post(
+		const response = await axios.post(
 			process.env.BACK_URL + `/smart-contract/${contract.network}/${contract.address}/call`,
 			{ ...body, signerWallet: airdrop.signerWallet },
 			{
@@ -104,6 +104,8 @@ export class Starton {
 				},
 			},
 		)
+
+		return response.data
 	}
 
 	static async createWatcher(contract: Contract, triggerId: string, watcherType: string) {

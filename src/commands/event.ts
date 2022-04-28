@@ -126,6 +126,7 @@ abstract class EventCommand {
 					throw "Couldn't create role"
 				}
 			}
+
 			if (channel) {
 				await this.updateChannel(channel, role)
 			} else if (!channel && newChannel) {
@@ -139,7 +140,7 @@ abstract class EventCommand {
 				channelId: channel?.id,
 				roleId: role.id,
 			})
-			await interaction.editReply(`Event created`)
+			await interaction.editReply(`Event ${name} created`)
 		} catch (e) {
 			console.log(e)
 			await interaction.editReply(`Could not register this event, please try again later`)
@@ -151,11 +152,16 @@ abstract class EventCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		const eventRepo = getConnection().getRepository(Event)
-		const events = await eventRepo.find({ where: { guildId: interaction.guild?.id } })
+		const events = await eventRepo
+			.find({ where: { guildId: interaction.guild?.id } })
+			.catch((e) => {
+				console.log(e)
+				return []
+			})
 
 		const replies: String[] = []
 		events.forEach((event) => {
-			replies.push(`${event.name} : ${event.password}`)
+			replies.push(`${event.name}: ${event.password}`)
 		})
 		if (!replies.length) {
 			return await interaction.editReply("You don't have any events yet")
@@ -214,7 +220,7 @@ abstract class EventCommand {
 			}
 			eventRepo.delete(event)
 
-			await interaction.editReply(`This event has been deleted.`)
+			await interaction.editReply(`Event ${event.name} deleted.`)
 		} catch (err) {
 			await interaction.editReply(`Could not delete this event`)
 		}

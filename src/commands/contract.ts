@@ -19,7 +19,7 @@ import { Guild } from "../entity/guild.entity"
 })
 @SlashGroup("contract", "Manage your triggers")
 abstract class ContractCommand {
-	@Slash("create")
+	@Slash("import")
 	private async createContract(
 		@SlashChoice("Ethereum Mainnet", Network.ETHEREUM_MAINNET)
 		@SlashChoice("Ethereum Ropsten", Network.ETHEREUM_ROPSTEN)
@@ -30,13 +30,13 @@ abstract class ContractCommand {
 		@SlashChoice("Polygon Mumbai", Network.POLYGON_MUMBAI)
 		@SlashChoice("Binance Mainnet", Network.BINANCE_MAINNET)
 		@SlashChoice("Binance Testnet", Network.BINANCE_TESTNET)
-		@SlashOption("network", { description: "Choose the network", required: true })
+		@SlashOption("network", { description: "Network of the contract", required: true })
 		network: Network,
 
 		@SlashChoice(Type.ERC20, Type.ERC20)
 		@SlashChoice(Type.ERC721, Type.ERC721)
 		@SlashChoice(Type.ERC1155, Type.ERC1155)
-		@SlashOption("type", { description: "Choose the type", required: true })
+		@SlashOption("type", { description: "Type of the contract", required: true })
 		type: Type,
 
 		@SlashOption("name", { required: true, description: "Name of the contract" })
@@ -79,13 +79,9 @@ abstract class ContractCommand {
 		const contracts = await contractRepo
 			.find({ where: { guildId: interaction?.guildId as string } })
 			.catch((e) => {
-				console.error(e)
+				console.log(e)
+				return []
 			})
-		if (!contracts) {
-			return await interaction.editReply(
-				`Could not register this contract, please try again later`,
-			)
-		}
 
 		const replies: String[] = []
 		contracts.forEach((contract) => {

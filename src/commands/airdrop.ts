@@ -53,7 +53,7 @@ abstract class AirdropCommand {
 		@SlashOption("channel", {
 			type: "CHANNEL",
 			required: false,
-			description: "Do the used need to be in a specific channel to participate ?",
+			description: "Channel in which the user must be to claim the tokens",
 		})
 		channel: GuildChannel,
 
@@ -66,14 +66,13 @@ abstract class AirdropCommand {
 		@SlashOption("interval", {
 			required: false,
 			description:
-				"How many seconds before the user can participate again. (Default -1 for only one participation)",
+				"How many seconds before the user can participate again. (Default -1 for a single participation)",
 		})
 		interval: number,
 
 		@SlashOption("chance", {
 			required: false,
-			description:
-				"Percentage of chance that the user will receive the airdrop. (Default 100)",
+			description: "Percentage of chance that the user will receive the token. (Default 100)",
 		})
 		chance: number,
 
@@ -90,7 +89,7 @@ abstract class AirdropCommand {
 
 			if (contract.type == Type.ERC1155 && !tokenId) {
 				return await interaction.editReply(
-					`You must provide a token ID for an ERC-1155 contract`,
+					`You must provide a token for an ERC-1155 contract`,
 				)
 			} else if (contract.type == Type.ERC721 && !metadataUri) {
 				return await interaction.editReply(
@@ -175,12 +174,12 @@ abstract class ClaimCommand {
 			const contractRepo = getConnection().getRepository(Contract)
 			const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
 
-			Starton.mintToken(contract, address, airdrop)
+			await Starton.mintToken(contract, address, airdrop)
 		} catch (e) {
 			console.log(e)
 			return `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
 		}
-		return `Congratulation <@${userId}> you WIN :rocket: :partying_face: :gift:`
+		return `Congratulation <@${userId}> you won :rocket: :partying_face: :gift:`
 	}
 
 	private formatTime(time: number): string {
@@ -239,7 +238,11 @@ abstract class ClaimCommand {
 					? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) /
 					  1000
 					: 0
-				if (!participations.at(-1) || timeFromLastParticipation >= airdrop.interval) {
+				if (
+					!participations.at(-1) ||
+					(airdrop.interval !== -1 &&
+					timeFromLastParticipation >= airdrop.interval)
+				) {
 					if (airdrop.chance >= Math.floor(Math.random() * 101)) {
 						replies.push(await this.airdrop(airdrop, address, interaction.user.id))
 					} else {
@@ -268,7 +271,11 @@ abstract class ClaimCommand {
 					)
 				}
 			}
-			await interaction.editReply(replies.join("\n"))
+			await interaction.editReply(
+				replies.length
+					? replies.join("\n")
+					: "There are no airdrops matching these conditions :cry:",
+			)
 		} catch (e) {
 			console.log(e)
 			await interaction.editReply(
