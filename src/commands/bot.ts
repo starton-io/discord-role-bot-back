@@ -58,16 +58,16 @@ abstract class InitStartonBotCommand {
 }
 
 @Discordx()
-@Permission(false)
-@Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
-	const guildRepo = getConnection().getRepository(Guild)
-	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
-
-	if (guildEntity && guildEntity.administratorRole) {
-		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
-	}
-	return []
-})
+// @Permission(false)
+// @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
+// 	const guildRepo = getConnection().getRepository(Guild)
+// 	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+//
+// 	if (guildEntity && guildEntity.administratorRole) {
+// 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
+// 	}
+// 	return []
+// })
 abstract class ManageStartonBotCommand {
 	@Slash("update-api-key")
 	private async updateApiKey(

@@ -12,16 +12,16 @@ import { Event } from "../entity/event.entity"
 import { Guild as GuildEntity } from "../entity/guild.entity"
 
 @Discord()
-@Permission(false)
-@Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
-	const guildRepo = getConnection().getRepository(GuildEntity)
-	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
-
-	if (guildEntity && guildEntity.administratorRole) {
-		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
-	}
-	return []
-})
+// @Permission(false)
+// @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
+// 	const guildRepo = getConnection().getRepository(GuildEntity)
+// 	const guildEntity = await guildRepo.findOne({ where: { guildId: guild.id } })
+//
+// 	if (guildEntity && guildEntity.administratorRole) {
+// 		return [{ id: guildEntity.administratorRole, permission: true, type: "ROLE" }]
+// 	}
+// 	return []
+// })
 @SlashGroup("event", "Manage your events")
 abstract class EventCommand {
 	private async createChannel(guild: Guild, name: string, roleId: string): Promise<GuildChannel> {
