@@ -21,15 +21,15 @@ import { Guild } from "../entity/guild.entity"
 abstract class ContractCommand {
 	@Slash("import")
 	private async createContract(
-		@SlashChoice("Ethereum Mainnet", Network.ETHEREUM_MAINNET)
-		@SlashChoice("Ethereum Ropsten", Network.ETHEREUM_ROPSTEN)
-		@SlashChoice("Ethereum Goerli", Network.ETHEREUM_GOERLI)
-		@SlashChoice("Avalanche Mainnet", Network.AVALANCHE_MAINNET)
-		@SlashChoice("Avalanche Fuji", Network.AVALANCHE_FUJI)
-		@SlashChoice("Polygon Mainnet", Network.POLYGON_MAINNET)
-		@SlashChoice("Polygon Mumbai", Network.POLYGON_MUMBAI)
-		@SlashChoice("Binance Mainnet", Network.BINANCE_MAINNET)
-		@SlashChoice("Binance Testnet", Network.BINANCE_TESTNET)
+		@SlashChoice("Ethereum Mainnet", Network.ETHEREUM_MAINNET as string)
+		@SlashChoice("Ethereum Ropsten", Network.ETHEREUM_ROPSTEN as string)
+		@SlashChoice("Ethereum Goerli", Network.ETHEREUM_GOERLI as string)
+		@SlashChoice("Avalanche Mainnet", Network.AVALANCHE_MAINNET as string)
+		@SlashChoice("Avalanche Fuji", Network.AVALANCHE_FUJI as string)
+		@SlashChoice("Polygon Mainnet", Network.POLYGON_MAINNET as string)
+		@SlashChoice("Polygon Mumbai", Network.POLYGON_MUMBAI as string)
+		@SlashChoice("Binance Mainnet", Network.BINANCE_MAINNET as string)
+		@SlashChoice("Binance Testnet", Network.BINANCE_TESTNET as string)
 		@SlashOption("network", { description: "Network of the contract", required: true })
 		network: Network,
 
