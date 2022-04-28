@@ -96,7 +96,7 @@ export class Starton {
 		}
 
 		const response = await axios.post(
-			process.env.BACK_URL + `/smart-contract/${contract.network}/${contract.address}/call`,
+			process.env.BACK_URL + `smart-contract/${contract.network}/${contract.address}/call`,
 			{ ...body, signerWallet: airdrop.signerWallet },
 			{
 				headers: {
