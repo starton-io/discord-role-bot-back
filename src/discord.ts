@@ -40,7 +40,11 @@ export class Discord {
 		})
 		this._client.on("guildCreate", async (guild) => {
 			await this._client.initApplicationCommands()
-			await this._client.initApplicationPermissions()
+			try {
+				await this._client.initApplicationPermissions()
+			} catch (e) {
+				console.log("Could not init application permissions", e)
+			}
 		})
 
 		this._client.on("interactionCreate", (interaction) => {
