@@ -53,9 +53,6 @@ abstract class EventCommand {
 	}
 
 	private async updateChannel(channel: GuildChannel, role: Role) {
-		if (!channel.isText()) {
-			throw "You must provide a text based channel"
-		}
 		await channel.permissionOverwrites.create(role, {
 			VIEW_CHANNEL: true,
 			ADD_REACTIONS: true,
@@ -109,42 +106,52 @@ abstract class EventCommand {
 			return await interaction.editReply(`You must provide a role (an existing or a new one)`)
 		}
 
-		try {
-			const eventRepo = getConnection().getRepository(Event)
-			const existingEvent = await eventRepo.findOne({
-				where: {
-					guildId: interaction?.guildId as string,
-					password: password,
-				},
-			})
-			if (existingEvent) {
-				return await interaction.editReply(`An event with this password already exists`)
-			}
+		const eventRepo = getConnection().getRepository(Event)
+		const existingEvent = await eventRepo.findOne({
+			where: {
+				guildId: interaction?.guildId as string,
+				password: password,
+			},
+		})
+		if (existingEvent) {
+			return await interaction.editReply(`An event with this password already exists.`)
+		}
 
+		if (!role) {
+			role = (await interaction.guild?.roles.create({ name: newRole })) as Role
 			if (!role) {
-				role = (await interaction.guild?.roles.create({ name: newRole })) as Role
-				if (!role) {
-					throw "Couldn't create role"
-				}
+				return await interaction.editReply(
+					"A problem occured during the creation of the role. Please try again later.",
+				)
 			}
+		}
 
+		let channelFailed = false
+		try {
 			if (channel) {
 				await this.updateChannel(channel, role)
 			} else if (!channel && newChannel) {
 				channel = await this.createChannel(interaction.guild as Guild, newChannel, role.id)
 			}
-
-			await eventRepo.save({
-				name,
-				guildId: interaction?.guildId as string,
-				password: password,
-				channelId: channel?.id,
-				roleId: role.id,
-			})
-			await interaction.editReply(`Event ${name} created`)
 		} catch (e) {
+			channelFailed = true
 			console.log(e)
-			await interaction.editReply(`Could not register this event, please try again later`)
+		}
+
+		await eventRepo.save({
+			name,
+			guildId: interaction?.guildId as string,
+			password: password,
+			channelId: channel?.id,
+			roleId: role.id,
+		})
+
+		if (channelFailed) {
+			await interaction.editReply(
+				`A problem occured with the channel, but the event ${name} has been created.`,
+			)
+		} else {
+			await interaction.editReply(`Event ${name} created.`)
 		}
 	}
 
@@ -153,21 +160,16 @@ abstract class EventCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		const eventRepo = getConnection().getRepository(Event)
-		const events = await eventRepo
-			.find({ where: { guildId: interaction.guild?.id } })
-			.catch((e) => {
-				console.log(e)
-				return []
-			})
+		const events = await eventRepo.find({ where: { guildId: interaction.guild?.id } })
 
 		const replies: String[] = []
 		events.forEach((event) => {
 			replies.push(`${event.name}: ${event.password}`)
 		})
-		if (!replies.length) {
-			return await interaction.editReply("You don't have any events yet")
-		}
-		await interaction.editReply(replies.join("\n"))
+
+		await interaction.editReply(
+			replies.length ? replies.join("\n") : "You don't have any events yet.",
+		)
 	}
 
 	@Slash("delete")
@@ -194,37 +196,36 @@ abstract class EventCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const eventRepo = getConnection().getRepository(Event)
-			const event = await eventRepo.findOneOrFail({
-				where: {
-					guildId: interaction?.guildId as string,
-					password: password,
-				},
-			})
-
-			if (deleteChannel && event.channelId) {
-				await interaction.guild?.channels.cache
-					.get(event.channelId)
-					?.delete()
-					.catch((e) => {
-						console.log(e)
-					})
-			}
-			if (deleteRole) {
-				await interaction.guild?.roles.cache
-					.get(event.roleId)
-					?.delete()
-					.catch((e) => {
-						console.log(e)
-					})
-			}
-			eventRepo.delete(event)
-
-			await interaction.editReply(`Event ${event.name} deleted.`)
-		} catch (err) {
-			await interaction.editReply(`Could not delete this event`)
+		const eventRepo = getConnection().getRepository(Event)
+		const event = await eventRepo.findOne({
+			where: {
+				guildId: interaction?.guildId as string,
+				password: password,
+			},
+		})
+		if (!event) {
+			return await interaction.editReply(`Couldn't find this event.`)
 		}
+
+		if (deleteChannel && event.channelId) {
+			await interaction.guild?.channels.cache
+				.get(event.channelId)
+				?.delete()
+				.catch((e) => {
+					console.log(e)
+				})
+		}
+		if (deleteRole) {
+			await interaction.guild?.roles.cache
+				.get(event.roleId)
+				?.delete()
+				.catch((e) => {
+					console.log(e)
+				})
+		}
+		eventRepo.delete(event)
+
+		await interaction.editReply(`Event ${event.name} deleted.`)
 	}
 }
 
@@ -239,26 +240,23 @@ abstract class JoinCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const eventRepo = getConnection().getRepository(Event)
-			const event = await eventRepo.findOneOrFail({
-				where: {
-					guildId: interaction?.guildId as string,
-					password: password,
-				},
-			})
+		const eventRepo = getConnection().getRepository(Event)
+		const event = await eventRepo.findOne({
+			where: {
+				guildId: interaction?.guildId as string,
+				password: password,
+			},
+		})
 
-			const member = (await interaction.guild?.members.fetch(
-				interaction.member.user.id,
-			)) as GuildMember
-
-			member.roles.add(event.roleId)
-			await interaction.editReply(
-				`You joined the ${event.name} event, enjoy your new privileges !`,
-			)
-		} catch (e) {
-			console.log(e)
-			await interaction.editReply(`Couldn't join this event`)
+		if (!event) {
+			return await interaction.editReply(`This password doesn't match any events :cry:.`)
 		}
+
+		const member = (await interaction.guild?.members.fetch(interaction.user.id)) as GuildMember
+		member.roles.add(event.roleId)
+
+		await interaction.editReply(
+			`You joined the ${event.name} event, enjoy your new privileges !`,
+		)
 	}
 }

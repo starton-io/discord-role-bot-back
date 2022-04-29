@@ -5,6 +5,7 @@ import { Network, Type } from "../interface/global"
 import { Starton } from "../starton"
 import { Contract } from "../entity/contract.entity"
 import { Guild } from "../entity/guild.entity"
+import validate from "uuid-validate"
 
 @Discord()
 // @Permission(false)
@@ -17,26 +18,26 @@ import { Guild } from "../entity/guild.entity"
 // 	}
 // 	return []
 // })
-@SlashGroup({ name: "contract", description: "Manage your triggers" })
+@SlashGroup({ name: "contract", description: "Manage your contracts" })
 @SlashGroup("contract")
 abstract class ContractCommand {
 	@Slash("import")
 	private async createContract(
-		@SlashChoice("Ethereum Mainnet", Network.ETHEREUM_MAINNET as string)
-		@SlashChoice("Ethereum Ropsten", Network.ETHEREUM_ROPSTEN as string)
-		@SlashChoice("Ethereum Goerli", Network.ETHEREUM_GOERLI as string)
-		@SlashChoice("Avalanche Mainnet", Network.AVALANCHE_MAINNET as string)
-		@SlashChoice("Avalanche Fuji", Network.AVALANCHE_FUJI as string)
-		@SlashChoice("Polygon Mainnet", Network.POLYGON_MAINNET as string)
-		@SlashChoice("Polygon Mumbai", Network.POLYGON_MUMBAI as string)
-		@SlashChoice("Binance Mainnet", Network.BINANCE_MAINNET as string)
-		@SlashChoice("Binance Testnet", Network.BINANCE_TESTNET as string)
+		@SlashChoice({ name: "Ethereum Mainnet", value: Network.ETHEREUM_MAINNET })
+		@SlashChoice({ name: "Ethereum Ropsten", value: Network.ETHEREUM_ROPSTEN })
+		@SlashChoice({ name: "Ethereum Goerli", value: Network.ETHEREUM_GOERLI })
+		@SlashChoice({ name: "Avalanche Mainnet", value: Network.AVALANCHE_MAINNET })
+		@SlashChoice({ name: "Avalanche Fuji", value: Network.AVALANCHE_FUJI })
+		@SlashChoice({ name: "Polygon Mainnet", value: Network.POLYGON_MAINNET })
+		@SlashChoice({ name: "Polygon Mumbai", value: Network.POLYGON_MUMBAI })
+		@SlashChoice({ name: "Binance Mainnet", value: Network.BINANCE_MAINNET })
+		@SlashChoice({ name: "Binance Testnet", value: Network.BINANCE_TESTNET })
 		@SlashOption("network", { description: "Network of the contract", required: true })
 		network: Network,
 
-		@SlashChoice(Type.ERC20, Type.ERC20)
-		@SlashChoice(Type.ERC721, Type.ERC721)
-		@SlashChoice(Type.ERC1155, Type.ERC1155)
+		@SlashChoice({ name: Type.ERC20, value: Type.ERC20 })
+		@SlashChoice({ name: Type.ERC721, value: Type.ERC721 })
+		@SlashChoice({ name: Type.ERC1155, value: Type.ERC1155 })
 		@SlashOption("type", { description: "Type of the contract", required: true })
 		type: Type,
 
@@ -57,19 +58,31 @@ abstract class ContractCommand {
 		}
 
 		try {
-			const contract = await Starton.registerContract(
+			await Starton.registerContract(
 				interaction?.guildId as string,
 				type,
 				network,
 				address,
 				name,
 			)
-			await interaction.editReply(
-				`${name} : An ${type} contract hosted on ${network} with address ${address} and id ${contract.id} registered!`,
-			)
 		} catch (e) {
-			await interaction.editReply(`Could not register this contract, please try again later`)
+			return await interaction.editReply(
+				`A problem occured during the importation of the contract. Please check the params.`,
+			)
 		}
+
+		const contractRepo = getConnection().getRepository(Contract)
+		const contract = await contractRepo.save({
+			guildId: interaction?.guildId as string,
+			address,
+			type,
+			network,
+			name,
+		})
+
+		await interaction.editReply(
+			`${name} : An ${type} contract hosted on ${network} with address ${address} and id ${contract.id} registered!`,
+		)
 	}
 
 	@Slash("list")
@@ -77,12 +90,9 @@ abstract class ContractCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		const contractRepo = getConnection().getRepository(Contract)
-		const contracts = await contractRepo
-			.find({ where: { guildId: interaction?.guildId as string } })
-			.catch((e) => {
-				console.log(e)
-				return []
-			})
+		const contracts = await contractRepo.find({
+			where: { guildId: interaction?.guildId as string },
+		})
 
 		const replies: String[] = []
 		contracts.forEach((contract) => {
@@ -90,10 +100,9 @@ abstract class ContractCommand {
 				`${contract.name} (${contract.id}) : An ${contract.type} contract hosted on ${contract.network} with address ${contract.address}.`,
 			)
 		})
-		if (!contracts.length) {
-			return await interaction.editReply("You don't have any contracts yet")
-		}
-		await interaction.editReply(replies.join("\n"))
+		await interaction.editReply(
+			replies.length ? replies.join("\n") : "You don't have any contracts yet.",
+		)
 	}
 
 	@Slash("delete")
@@ -108,14 +117,18 @@ abstract class ContractCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOneOrFail({ where: { id: contractId } })
-			await contractRepo.delete(contract)
-
-			await interaction.editReply(`Contract ${contract.name} deleted.`)
-		} catch (e) {
-			await interaction.editReply(`Could not delete this contract, please try again later`)
+		if (!validate(contractId)) {
+			return await interaction.editReply(`You must provide a valid ID.`)
 		}
+
+		const contractRepo = getConnection().getRepository(Contract)
+		const contract = await contractRepo.findOne({ where: { id: contractId } })
+		if (!contract) {
+			return await interaction.editReply(`Couldn't find this contract.`)
+		}
+
+		await contractRepo.delete(contract)
+
+		await interaction.editReply(`Contract ${contract.name} deleted.`)
 	}
 }

@@ -1,11 +1,12 @@
 import { ApplicationCommandPermissions, CommandInteraction, Role } from "discord.js"
-import { Discord as Discordx, Permission, Slash, SlashGroup, SlashOption } from "discordx"
+import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
 import { Starton } from "../starton"
 import { Guild } from "../entity/guild.entity"
-import { Discord } from "../discord"
+import { Discord as DiscordIntance } from "../discord"
+import { Logger } from "../logger"
 
-@Discordx()
+@Discord()
 abstract class InitStartonBotCommand {
 	@Slash("init")
 	private async init(
@@ -22,34 +23,25 @@ abstract class InitStartonBotCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const guildRepo = getConnection().getRepository(Guild)
-			const existingGuild = await guildRepo.findOne({
-				where: {
-					guildId: interaction.guildId,
-				},
-			})
-			if (existingGuild) {
-				return await interaction.editReply(`This bot is already configured`)
-			}
-
-			const signingKey = await Starton.getSigningKey(apiKey)
-			if (!signingKey) {
-				throw "Coudl't retrieve signing key"
-			}
-			await guildRepo.save({
-				guildId: interaction?.guildId as string,
-				administratorRole: administratorRole.id,
-				apiKey: apiKey,
-				signingKey: signingKey,
-			})
-		} catch (e) {
-			console.log(e)
-			return await interaction.editReply(`Could not init the bot, please try again later`)
+		const guildRepo = getConnection().getRepository(Guild)
+		const existingGuild = await guildRepo.findOne({ where: { guildId: interaction.guildId } })
+		if (existingGuild) {
+			return await interaction.editReply(`This bot is already configured.`)
 		}
 
+		const signingKey = await Starton.getSigningKey(apiKey)
+		if (!signingKey) {
+			return await interaction.editReply(`Api key verification failed, is this key valid ?`)
+		}
+		await guildRepo.save({
+			guildId: interaction?.guildId as string,
+			administratorRole: administratorRole.id,
+			apiKey: apiKey,
+			signingKey: signingKey,
+		})
+
 		try {
-			await Discord.Client.initApplicationPermissions()
+			await DiscordIntance.Client.initApplicationPermissions()
 		} catch (e) {
 			console.log("Could not init application permissions", e)
 		}
@@ -57,7 +49,7 @@ abstract class InitStartonBotCommand {
 	}
 }
 
-@Discordx()
+@Discord()
 // @Permission(false)
 // @Permission(async (guild, cmd): Promise<ApplicationCommandPermissions[]> => {
 // 	const guildRepo = getConnection().getRepository(Guild)
@@ -78,48 +70,36 @@ abstract class ManageStartonBotCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const guildRepo = getConnection().getRepository(Guild)
-			const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
+		const guildRepo = getConnection().getRepository(Guild)
+		const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
 
-			if (!(await Starton.getSigningKey(key))) {
-				throw "Could not get signing key"
-			}
-
-			guild.apiKey = key
-			await guildRepo.save(guild)
-
-			await interaction.editReply(`Api-key updated`)
-		} catch (e) {
-			console.log(e)
-			await interaction.editReply(`Could not update api-key`)
+		if (!(await Starton.getSigningKey(key))) {
+			return await interaction.editReply(`Api key verification failed, is this key valid ?`)
 		}
+
+		guild.apiKey = key
+		await guildRepo.save(guild)
+
+		await interaction.editReply(`Api-key updated`)
 	}
 
 	@Slash("update-signing-key")
 	private async updateSigningKey(interaction: CommandInteraction) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const guildRepo = getConnection().getRepository(Guild)
-			const guild = await guildRepo.findOneOrFail({
-				where: {
-					guildId: interaction.guildId,
-				},
-			})
+		const guildRepo = getConnection().getRepository(Guild)
+		const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
 
-			const signingKey = await Starton.regenerateSigningKey(guild.apiKey)
-			if (!signingKey) {
-				throw "Could not create signing key"
-			}
-
-			guild.signingKey = signingKey
-			await guildRepo.save(guild)
-
-			await interaction.editReply(`Signing-key updated`)
-		} catch (e) {
-			console.log(e)
-			await interaction.editReply(`Could not update signing-key`)
+		const signingKey = await Starton.regenerateSigningKey(guild.apiKey)
+		if (!signingKey) {
+			return await interaction.editReply(
+				`Could not retreive signing-key, please try again later`,
+			)
 		}
+
+		guild.signingKey = signingKey
+		await guildRepo.save(guild)
+
+		await interaction.editReply(`Signing-key updated`)
 	}
 }

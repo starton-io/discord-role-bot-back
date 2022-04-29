@@ -1,7 +1,8 @@
 import "reflect-metadata"
 import { Client } from "discordx"
-import { Intents } from "discord.js"
+import { CommandInteraction, Intents, Interaction } from "discord.js"
 import { importx } from "@discordx/importer"
+import { Logger } from "./logger"
 
 export class Discord {
 	private static _client: Client
@@ -47,8 +48,18 @@ export class Discord {
 			}
 		})
 
-		this._client.on("interactionCreate", (interaction) => {
-			this._client.executeInteraction(interaction)
+		this._client.on("interactionCreate", async (interaction) => {
+			try {
+				await this._client.executeInteraction(interaction)
+			} catch (e) {
+				if (interaction.isCommand()) {
+					Logger.logInteraction(interaction as CommandInteraction)
+					await (interaction as CommandInteraction).editReply(
+						`Could not execute this command, please try again later`,
+					)
+				}
+				console.log(e)
+			}
 		})
 
 		await importx(__dirname + "/commands/**/*.{js,ts}")

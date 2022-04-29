@@ -1,11 +1,13 @@
 import { ApplicationCommandPermissions, CommandInteraction, GuildChannel } from "discord.js"
 import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
+import validate from "uuid-validate"
 import { Airdrop } from "../entity/airdrop.entity"
 import { Contract } from "../entity/contract.entity"
 import { Guild as GuildEntity } from "../entity/guild.entity"
 import { Participation } from "../entity/participation.entity"
 import { Type } from "../interface/global"
+import { Logger } from "../logger"
 import { Starton } from "../starton"
 
 @Discord()
@@ -19,8 +21,8 @@ import { Starton } from "../starton"
 // 	}
 // 	return []
 // })
-@SlashGroup({ name: "airdrops", description: "Manage your airdrops" })
-@SlashGroup("airdrops")
+@SlashGroup({ name: "airdrop", description: "Manage your airdrops" })
+@SlashGroup("airdrop")
 abstract class AirdropCommand {
 	@Slash("create")
 	private async createAirdrop(
@@ -81,43 +83,43 @@ abstract class AirdropCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOne({ where: { id: contractId } })
-			if (!contract) {
-				return await interaction.editReply(`Couldn't find this contract`)
-			}
-
-			if (contract.type == Type.ERC1155 && !tokenId) {
-				return await interaction.editReply(
-					`You must provide a token for an ERC-1155 contract`,
-				)
-			} else if (contract.type == Type.ERC721 && !metadataUri) {
-				return await interaction.editReply(
-					`You must provide metadata for an ERC-721 contract`,
-				)
-			}
-
-			const airdropRepo = getConnection().getRepository(Airdrop)
-			await airdropRepo.save({
-				name,
-				guildId: interaction.guild?.id,
-				contractId: contract.id,
-				signerWallet,
-				amount,
-				metadataUri,
-				tokenId,
-				data,
-				password,
-				channelId: channel?.id,
-				interval,
-				chance,
-			})
-			await interaction.editReply(`Airdrop created`)
-		} catch (e) {
-			console.log(e)
-			await interaction.editReply(`Could not register this airdrop, please try again later`)
+		if (!validate(contractId)) {
+			return await interaction.editReply(`You must provide a valid ID.`)
 		}
+		if (!signerWallet.match(/0x[a-fA-F0-9]{40}/)) {
+			return await interaction.editReply(
+				"You must provide a valid signer wallet :white_check_mark:",
+			)
+		}
+
+		const contractRepo = getConnection().getRepository(Contract)
+		const contract = await contractRepo.findOne({ where: { id: contractId } })
+		if (!contract) {
+			return await interaction.editReply(`Couldn't find this contract.`)
+		}
+
+		if (contract.type == Type.ERC1155 && !tokenId) {
+			return await interaction.editReply(`You must provide a token for an ERC-1155 contract`)
+		} else if (contract.type == Type.ERC721 && !metadataUri) {
+			return await interaction.editReply(`You must provide metadata for an ERC-721 contract`)
+		}
+
+		const airdropRepo = getConnection().getRepository(Airdrop)
+		await airdropRepo.save({
+			name,
+			guildId: interaction.guild?.id,
+			contractId: contract.id,
+			signerWallet,
+			amount,
+			metadataUri,
+			tokenId,
+			data,
+			password,
+			channelId: channel?.id,
+			interval,
+			chance,
+		})
+		await interaction.editReply(`Airdrop created.`)
 	}
 
 	@Slash("list")
@@ -135,10 +137,9 @@ abstract class AirdropCommand {
 				}.`,
 			)
 		})
-		if (!replies.length) {
-			return await interaction.editReply("You don't have any airdrops yet")
-		}
-		await interaction.editReply(replies.join("\n"))
+		await interaction.editReply(
+			replies.length ? replies.join("\n") : "You don't have any airdrops yet.",
+		)
 	}
 
 	@Slash("delete")
@@ -153,33 +154,64 @@ abstract class AirdropCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
-		try {
-			const airdropRepo = getConnection().getRepository(Airdrop)
-			const airdrop = await airdropRepo.findOneOrFail({ where: { id: airdropId } })
-
-			const participationRepo = getConnection().getRepository(Participation)
-			const participations = await participationRepo.find({ where: { airdropId } })
-			for (const participation of participations) {
-				await participationRepo.delete(participation)
-			}
-
-			await airdropRepo.delete(airdrop)
-
-			await interaction.editReply(`Airdrop ${airdrop.name} deleted.`)
-		} catch (err) {
-			await interaction.editReply(`Could not delete this airdrop, please try again later`)
+		const airdropRepo = getConnection().getRepository(Airdrop)
+		const airdrop = await airdropRepo.findOne({ where: { id: airdropId } })
+		if (!airdrop) {
+			return await interaction.editReply(`Couldn't find this airdrop.`)
 		}
+
+		const participationRepo = getConnection().getRepository(Participation)
+		const participations = await participationRepo.find({ where: { airdropId } })
+		for (const participation of participations) {
+			await participationRepo.delete(participation)
+		}
+
+		await airdropRepo.delete(airdrop)
+
+		await interaction.editReply(`Airdrop ${airdrop.name} deleted.`)
 	}
 }
 
 @Discord()
 abstract class ClaimCommand {
-	private async airdrop(airdrop: Airdrop, address: string, userId: string): Promise<string> {
-		const contractRepo = getConnection().getRepository(Contract)
-		const contract = await contractRepo.findOneOrFail({ where: { id: airdrop.contractId } })
+	private async airdrop(
+		airdrop: Airdrop,
+		participation: Participation,
+		timeFromLastParticipation: number,
+		address: string,
+		userId: string,
+	): Promise<string> {
+		let response
+		try {
+			if (airdrop.chance >= Math.floor(Math.random() * 101)) {
+				const contractRepo = getConnection().getRepository(Contract)
+				const contract = await contractRepo.findOneOrFail({
+					where: { id: airdrop.contractId },
+				})
 
-		const response = await Starton.mintToken(contract, address, airdrop)
-		return `Congratulation <@${userId}> you won :rocket: :partying_face: :gift:. You wan see your transaction on ${contract.network} with the transaction hash ${response.transactionHash}`
+				const startonResponse = await Starton.mintToken(contract, address, airdrop)
+
+				response = `Congratulation <@${userId}> you won :rocket: :partying_face: :gift:. You can see your transaction on ${contract.network} with the transaction hash ${startonResponse.transactionHash} !`
+			} else {
+				response =
+					`Sorry <@${userId}> you didn't win :cry:` +
+					(airdrop.interval === -1 || !participation)
+						? ``
+						: ` Try again in ${this.formatTime(
+								airdrop.interval - timeFromLastParticipation,
+						  )} !`
+			}
+			const participationRepo = getConnection().getRepository(Participation)
+			await participationRepo.save({
+				airdropId: airdrop.id,
+				memberId: userId,
+				address,
+			})
+		} catch (e) {
+			console.log(e)
+			response = `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
+		}
+		return response
 	}
 
 	private formatTime(time: number): string {
@@ -217,74 +249,52 @@ abstract class ClaimCommand {
 			)
 		}
 
-		try {
-			const airdropRepo = getConnection().getRepository(Airdrop)
-			const participationRepo = getConnection().getRepository(Participation)
-			const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
-			const replies: string[] = []
+		const airdropRepo = getConnection().getRepository(Airdrop)
+		const participationRepo = getConnection().getRepository(Participation)
+		const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
+		const replies: string[] = []
 
-			for (const airdrop of airdrops) {
-				if (!this.isUserAllowed(airdrop, password, interaction.channel?.id as string))
-					continue
+		for (const airdrop of airdrops) {
+			if (!this.isUserAllowed(airdrop, password, interaction.channel?.id as string)) continue
 
-				const participations = await participationRepo.find({
-					where: [
-						{ airdropId: airdrop.id, address },
-						{ airdropId: airdrop.id, memberId: interaction.user.id },
-					],
-				})
+			const participations = await participationRepo.find({
+				where: [
+					{ airdropId: airdrop.id, address },
+					{ airdropId: airdrop.id, memberId: interaction.user.id },
+				],
+			})
 
-				const timeFromLastParticipation = participations.at(-1)
-					? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) /
-					  1000
-					: 0
-				if (
-					!participations.at(-1) ||
-					(airdrop.interval !== -1 && timeFromLastParticipation >= airdrop.interval)
-				) {
-					try {
-						if (airdrop.chance >= Math.floor(Math.random() * 101)) {
-							replies.push(await this.airdrop(airdrop, address, interaction.user.id))
-						} else {
-							replies.push(
-								`Sorry <@${interaction.user.id}> you didn't win :cry:` +
-									(airdrop.interval === -1 || !participations.at(-1)
-										? ``
-										: ` Try again in ${this.formatTime(
-												airdrop.interval - timeFromLastParticipation,
-										  )} !`),
-							)
-						}
-						await participationRepo.save({
-							airdropId: airdrop.id,
-							memberId: interaction.user.id,
-							address,
-						})
-					} catch (e) {
-						console.log(e)
-						replies.push(`Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`)
-					}
-				} else {
-					replies.push(
-						`You have already claimed this airdrop.` +
-							(airdrop.interval === -1
-								? ``
-								: ` Try again in ${this.formatTime(
-										airdrop.interval - timeFromLastParticipation,
-								  )} !`),
-					)
-				}
+			const timeFromLastParticipation = participations.at(-1)
+				? (Date.now() - (participations.at(-1) as Participation).createdAt.valueOf()) / 1000
+				: 0
+			if (
+				!participations.at(-1) ||
+				(airdrop.interval !== -1 && timeFromLastParticipation >= airdrop.interval)
+			) {
+				replies.push(
+					await this.airdrop(
+						airdrop,
+						participations.at(-1) as Participation,
+						timeFromLastParticipation,
+						address,
+						interaction.user.id,
+					),
+				)
+			} else {
+				replies.push(
+					`You have already claimed this airdrop.` +
+						(airdrop.interval === -1
+							? ``
+							: ` Try again in ${this.formatTime(
+									airdrop.interval - timeFromLastParticipation,
+							  )} !`),
+				)
 			}
-			await interaction.editReply(
-				replies.length
-					? replies.join("\n")
-					: "There are no airdrops matching these conditions :cry:",
-			)
-		} catch (e) {
-			console.log(e)
-			await interaction.editReply(
-				"Couldn't participate to the airdrops. Please try again later.",
-			)
 		}
+		await interaction.editReply(
+			replies.length
+				? replies.join("\n")
+				: "There are no airdrops matching these conditions :cry:",
+		)
 	}
 }

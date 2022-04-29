@@ -64,31 +64,19 @@ createConnection({
 	app.post("/hook", async (req: Request, res: Response) => {
 		try {
 			const triggerRepo = getConnection().getRepository(RoleTrigger)
-			const trigger = await triggerRepo.findOneOrFail({
-				where: {
-					id: req.query.id,
-				},
-			})
+			const trigger = await triggerRepo.findOneOrFail({ where: { id: req.query.id } })
 
 			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOneOrFail({
-				where: {
-					id: trigger.contractId,
-				},
-			})
+			const contract = await contractRepo.findOneOrFail({ where: { id: trigger.contractId } })
 
 			const guildRepo = getConnection().getRepository(Guild)
-			const guild = await guildRepo.findOneOrFail({
-				where: {
-					guildId: contract.guildId,
-				},
-			})
+			const guild = await guildRepo.findOneOrFail({ where: { guildId: contract.guildId } })
 
 			const hash = createHmac("sha256", guild.signingKey)
 				.update(JSON.stringify(req.body))
 				.digest("hex")
 
-			if (hash !== req.headers["starton-signature"]) {
+			if (!req.headers["starton-signature"] || hash !== req.headers["starton-signature"]) {
 				throw "Signature doen't match"
 			}
 
@@ -97,16 +85,15 @@ createConnection({
 
 			for (const member of members) {
 				if (req.body.data.transfer && req.body.data.transfer.to === member.address) {
-					Starton.updateMemberRole(contract, trigger, member)
+					await Starton.updateMemberRole(contract, trigger, member)
 				} else if (
 					req.body.data.transfer &&
 					req.body.data.transfer.from === member.address
 				) {
-					Starton.updateMemberRole(contract, trigger, member)
+					await Starton.updateMemberRole(contract, trigger, member)
 				}
 			}
 		} catch (e) {
-			console.log(req)
 			console.log(e)
 			return res.json({
 				result: "ko",

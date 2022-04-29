@@ -14,11 +14,7 @@ import confirmationsBlocks from "./interface/confirmations-blocks"
 export class Starton {
 	static async getApiKey(guildId: string): Promise<string | undefined> {
 		const guildRepo = getConnection().getRepository(Guild)
-		const guild = await guildRepo.findOne({
-			where: {
-				guildId: guildId,
-			},
-		})
+		const guild = await guildRepo.findOne({ where: { guildId: guildId } })
 		return guild?.apiKey
 	}
 
@@ -58,7 +54,7 @@ export class Starton {
 		network: Network,
 		address: string,
 		name: string,
-	): Promise<Contract> {
+	) {
 		await axios.post(
 			process.env.BACK_URL + "smart-contract/import-existing",
 			{
@@ -73,15 +69,6 @@ export class Starton {
 				},
 			},
 		)
-
-		const contractRepo = getConnection().getRepository(Contract)
-		return contractRepo.save({
-			guildId,
-			address,
-			type,
-			network,
-			name,
-		})
 	}
 
 	static async mintToken(contract: Contract, address: string, airdrop: Airdrop) {
@@ -109,30 +96,25 @@ export class Starton {
 	}
 
 	static async createWatcher(contract: Contract, triggerId: string, watcherType: string) {
-		const response = await axios
-			.post(
-				process.env.BACK_URL + "watcher",
-				{
-					address: contract.address,
-					network: contract.network,
-					type: watcherType,
-					webhookUrl: process.env.WEBHOOK_URL + "hook?id=" + triggerId,
-					confirmationsBlocks: confirmationsBlocks[contract.network],
+		const response = await axios.post(
+			process.env.BACK_URL + "watcher",
+			{
+				address: contract.address,
+				network: contract.network,
+				type: watcherType,
+				webhookUrl: process.env.WEBHOOK_URL + "hook?id=" + triggerId,
+				confirmationsBlocks: confirmationsBlocks[contract.network],
+			},
+			{
+				headers: {
+					"x-api-key": await this.getApiKey(contract.guildId),
 				},
-				{
-					headers: {
-						"x-api-key": await this.getApiKey(contract.guildId),
-					},
-				},
-			)
-			.catch((e) => {
-				if (e.response.data.statusCode === 409) return { data: {} }
-				console.log(e.response.data)
-			})
-		return response?.data
+			},
+		)
+		return response.data
 	}
 
-	private static async getBalanceOf(
+	static async getBalanceOf(
 		contract: Contract,
 		trigger: RoleTrigger,
 		member: Member,
@@ -147,8 +129,7 @@ export class Starton {
 
 		const response = await axios
 			.post(
-				process.env.BACK_URL +
-					`/smart-contract/${contract.network}/${contract.address}/read`,
+				process.env.BACK_URL + `smart-contract/${contract.network}/${contract.address}/rea`,
 				{
 					functionName: "balanceOf",
 					params,
@@ -159,10 +140,7 @@ export class Starton {
 					},
 				},
 			)
-			.catch((e) => {
-				console.log(e.response.data)
-			})
-		return BigNumber.from(response?.data.response.raw)
+		return BigNumber.from(response.data.response.raw)
 	}
 
 	private static async assignRoleToMember(
@@ -170,42 +148,36 @@ export class Starton {
 		trigger: RoleTrigger,
 		member: Member,
 	) {
-		const amount = await this.getBalanceOf(contract, trigger, member)
+		try {
+			const amount = await this.getBalanceOf(contract, trigger, member)
 
-		if (amount.gte(trigger.min) && (!trigger.max || amount.lte(trigger.max))) {
-			try {
+			if (amount.gte(trigger.min) && (!trigger.max || amount.lte(trigger.max))) {
 				const guild = await Discord.Client.guilds.fetch(contract.guildId)
 				const discordMember = await guild.members.fetch(member.memberId)
 
 				discordMember.roles.add(trigger.roleId)
-			} catch (e) {
-				console.log(e)
+				console.log(
+					`Role ${trigger.roleId} given to user ${member.memberId} (${
+						member.address
+					}) with ${amount.toString()} ${contract.type} (${contract.address}) `,
+				)
 			}
-
+		} catch (e) {
 			console.log(
-				`Role ${trigger.roleId} given to user ${member.memberId} (${
-					member.address
-				}) with ${amount.toString()} ${contract.type} (${contract.address}) `,
+				`Failed role ${trigger.roleId} attribution to user ${member.memberId} (${member.address})`,
 			)
+			console.log(e)
 		}
 	}
 
 	static async assignRolesToMember(member: Member) {
 		const contractRepo = getConnection().getRepository(Contract)
 		const triggerRepo = getConnection().getRepository(RoleTrigger)
-		const contracts = await contractRepo.find({
-			where: {
-				guildId: member.guildId,
-			},
-		})
+		const contracts = await contractRepo.find({ where: { guildId: member.guildId } })
 		let triggers = []
 
 		for (const contract of contracts) {
-			triggers = await triggerRepo.find({
-				where: {
-					contractId: contract.id,
-				},
-			})
+			triggers = await triggerRepo.find({ where: { contractId: contract.id } })
 			for (const trigger of triggers) {
 				await this.assignRoleToMember(contract, trigger, member)
 			}
@@ -214,11 +186,7 @@ export class Starton {
 
 	static async assignRoleToAllMembers(contract: Contract, trigger: RoleTrigger) {
 		const memberRepo = getConnection().getRepository(Member)
-		const members = await memberRepo.find({
-			where: {
-				guildId: contract.guildId,
-			},
-		})
+		const members = await memberRepo.find({ where: { guildId: contract.guildId } })
 
 		for (const member of members) {
 			await this.assignRoleToMember(contract, trigger, member)
@@ -226,9 +194,8 @@ export class Starton {
 	}
 
 	static async updateMemberRole(contract: Contract, trigger: RoleTrigger, member: Member) {
-		const amount = await this.getBalanceOf(contract, trigger, member)
-
 		try {
+			const amount = await this.getBalanceOf(contract, trigger, member)
 			const guild = await Discord.Client.guilds.fetch(contract.guildId)
 			const discordMember = await guild.members.fetch(member.memberId)
 
@@ -248,6 +215,9 @@ export class Starton {
 				)
 			}
 		} catch (e) {
+			console.log(
+				`Failed role ${trigger.roleId} attribution to user ${member.memberId} (${member.address})`,
+			)
 			console.log(e)
 		}
 	}
