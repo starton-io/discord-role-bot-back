@@ -86,7 +86,7 @@ abstract class RoleTriggerCommand {
 			} catch (e: any) {
 				await Logger.logDiscord(
 					interaction?.guildId as string,
-					"An error occured during the creation of a watcher." +
+					":red_circle: An error occured during the creation of a watcher." +
 						"```json\n" +
 						JSON.stringify({
 							contractId,
@@ -108,6 +108,11 @@ abstract class RoleTriggerCommand {
 		}
 
 		await Starton.assignRoleToAllMembers(contract, trigger)
+
+		await Logger.logDiscord(
+			contract.guildId as string,
+			`:green_circle: Trigger created on contract ${contract.name} by <@${interaction.user.id}>.`,
+		)
 
 		await interaction.editReply(
 			`Trigger created on ${contract.name} ! The role ${role.name} will be given to every users respecting the conditions !`,
@@ -175,6 +180,14 @@ abstract class RoleTriggerCommand {
 
 		await triggerRepo.delete(trigger)
 
+		const contractRepo = getConnection().getRepository(Contract)
+		const contract = await contractRepo.findOne({ where: { id: trigger.contractId } })
+		if (contract) {
+			await Logger.logDiscord(
+				contract.guildId as string,
+				`:green_circle: Trigger on contract ${contract.name} deleted by <@${interaction.user.id}>.`,
+			)
+		}
 		await interaction.editReply(`This trigger has been deleted.`)
 	}
 }

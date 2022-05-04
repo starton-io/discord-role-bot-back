@@ -140,7 +140,7 @@ export class Starton {
 		} catch (e: any) {
 			await Logger.logDiscord(
 				contract.guildId as string,
-				"Failed to assign a role to a member." +
+				":red_circle: Failed to assign a role to a member." +
 					"```json\n" +
 					JSON.stringify({
 						address: member.address,
@@ -208,7 +208,7 @@ export class Starton {
 			console.log(e)
 			await Logger.logDiscord(
 				contract.guildId as string,
-				"Failed to assign a role to a member." +
+				":red_circle: Failed to assign a role to a member." +
 					"```json\n" +
 					JSON.stringify({
 						address: member.address,

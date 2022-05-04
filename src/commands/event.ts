@@ -10,6 +10,7 @@ import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
 import { Event } from "../entity/event.entity"
 import { Guild as GuildEntity } from "../entity/guild.entity"
+import { Logger } from "../logger"
 
 @Discord()
 // @Permission(false)
@@ -138,7 +139,7 @@ abstract class EventCommand {
 			console.log(e)
 		}
 
-		await eventRepo.save({
+		const event = await eventRepo.save({
 			name,
 			guildId: interaction?.guildId as string,
 			password: password,
@@ -146,6 +147,10 @@ abstract class EventCommand {
 			roleId: role.id,
 		})
 
+		await Logger.logDiscord(
+			event.guildId as string,
+			`:green_circle: Event ${name} created by <@${interaction.user.id}>.`,
+		)
 		if (channelFailed) {
 			await interaction.editReply(
 				`A problem occured with the channel, but the event ${name} has been created.`,
@@ -225,6 +230,10 @@ abstract class EventCommand {
 		}
 		eventRepo.delete(event)
 
+		await Logger.logDiscord(
+			event.guildId as string,
+			`:green_circle: Event ${event.name} deleted by <@${interaction.user.id}>.`,
+		)
 		await interaction.editReply(`Event ${event.name} deleted.`)
 	}
 }

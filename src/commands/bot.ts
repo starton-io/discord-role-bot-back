@@ -55,6 +55,7 @@ abstract class InitStartonBotCommand {
 			console.log("Could not init application permissions", e)
 		}
 
+		await Logger.logDiscord(interaction?.guildId as string, ":green_circle: Starton bot initialized.")
 		await interaction.editReply(`Discord server registered!`)
 	}
 }

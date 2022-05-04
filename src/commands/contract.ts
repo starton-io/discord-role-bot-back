@@ -54,9 +54,7 @@ abstract class ContractCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
-			return await interaction.editReply(
-				"You must provide a valid address :white_check_mark:",
-			)
+			return await interaction.editReply("You must provide a valid address :green_circle:")
 		}
 
 		try {
@@ -70,7 +68,7 @@ abstract class ContractCommand {
 		} catch (e: any) {
 			await Logger.logDiscord(
 				interaction?.guildId as string,
-				"An error occured during the import of a contract." +
+				":red_circle: An error occured during the import of a contract." +
 					"```json\n" +
 					JSON.stringify({
 						network,
@@ -97,6 +95,10 @@ abstract class ContractCommand {
 			name,
 		})
 
+		await Logger.logDiscord(
+			contract.guildId as string,
+			`:green_circle: Contract ${name} created by <@${interaction.user.id}>.`,
+		)
 		await interaction.editReply(
 			`${name} : An ${type} contract hosted on ${network} with address ${address} and id ${contract.id} registered!`,
 		)
@@ -149,9 +151,13 @@ abstract class ContractCommand {
 		for (const trigger of triggers) {
 			await triggerRepo.delete(trigger)
 		}
-	
+
 		await contractRepo.delete(contract)
 
+		await Logger.logDiscord(
+			contract.guildId as string,
+			`:green_circle: Contract ${contract.name} deleted by <@${interaction.user.id}>.`,
+		)
 		await interaction.editReply(`Contract ${contract.name} deleted.`)
 	}
 }

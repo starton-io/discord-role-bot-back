@@ -119,6 +119,11 @@ abstract class AirdropCommand {
 			interval,
 			chance,
 		})
+
+		await Logger.logDiscord(
+			contract.guildId as string,
+			`:green_circle: Airdrop ${name} created by <@${interaction.user.id}>.`,
+		)
 		await interaction.editReply(`Airdrop created.`)
 	}
 
@@ -168,6 +173,10 @@ abstract class AirdropCommand {
 
 		await airdropRepo.delete(airdrop)
 
+		await Logger.logDiscord(
+			airdrop.guildId as string,
+			`:green_circle: Airdrop ${airdrop.name} deleted by <@${interaction.user.id}>.`,
+		)
 		await interaction.editReply(`Airdrop ${airdrop.name} deleted.`)
 	}
 }
@@ -207,6 +216,11 @@ abstract class ClaimCommand {
 				memberId: userId,
 				address,
 			})
+
+			await Logger.logDiscord(
+				airdrop.guildId as string,
+				`:green_circle: Airdrop ${airdrop.name} claimed by <@${userId}>.`,
+			)
 		} catch (e: any) {
 			const contractRepo = getConnection().getRepository(Contract)
 			const contract = await contractRepo.findOne({
@@ -215,7 +229,7 @@ abstract class ClaimCommand {
 			if (contract) {
 				await Logger.logDiscord(
 					contract.guildId as string,
-					"An error occured during the creation of an airdrop." +
+					":red_circle: An error occured during the creation of an airdrop." +
 						"```json\n" +
 						JSON.stringify({
 							address,
@@ -266,7 +280,7 @@ abstract class ClaimCommand {
 
 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
 			return await interaction.editReply(
-				"You must provide a valid address :white_check_mark:",
+				"You must provide a valid address :green_circle:",
 			)
 		}
 
