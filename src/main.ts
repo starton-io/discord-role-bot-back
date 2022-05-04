@@ -41,9 +41,7 @@ createConnection({
 
 		const link = await connection.getRepository(Link).findOne(req.params.id)
 		if (!link) {
-			return res.status(404).json({
-				error: "Invalid id",
-			})
+			return res.status(404).json({ error: "Invalid id" })
 		}
 
 		const address = ethers.utils.verifyMessage("Welcome to Starton", req.body.signature)
@@ -56,9 +54,7 @@ createConnection({
 
 		await Starton.assignRolesToMember(member)
 
-		return res.json({
-			result: "ok",
-		})
+		return res.json({ result: "ok" })
 	})
 
 	app.post("/hook", async (req: Request, res: Response) => {
@@ -95,13 +91,9 @@ createConnection({
 			}
 		} catch (e) {
 			console.log(e)
-			return res.json({
-				result: "ko",
-			})
+			return res.status(400).json({ error: "An error occured" })
 		}
-		return res.json({
-			result: "ok",
-		})
+		return res.json({ result: "ok" })
 	})
 
 	// start express server

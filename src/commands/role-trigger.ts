@@ -8,6 +8,7 @@ import { Guild } from "../entity/guild.entity"
 import { RoleTrigger } from "../entity/role-trigger.entity"
 import watchers from "../interface/watcher"
 import validate from "uuid-validate"
+import { Logger } from "../logger"
 
 @Discord()
 // @Permission(false)
@@ -82,7 +83,22 @@ abstract class RoleTriggerCommand {
 		for (const watcherType of watchers[contract.type]) {
 			try {
 				await Starton.createWatcher(contract as Contract, trigger.id, watcherType)
-			} catch (e) {
+			} catch (e: any) {
+				await Logger.logDiscord(
+					interaction?.guildId as string,
+					"An error occured during the creation of a watcher." +
+						"```json\n" +
+						JSON.stringify({
+							contractId,
+							tokenId,
+							watcherType,
+							status: e.response.data.statusCode,
+							error: e.response.data.errorCode,
+							message: e.response.data.message,
+							date: e.response.headers.date,
+						}) +
+						"\n```",
+				)
 				console.log(e)
 				triggerRepo.delete(trigger)
 				return await interaction.editReply(

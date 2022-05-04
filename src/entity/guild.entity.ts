@@ -11,6 +11,9 @@ export class Guild {
 	@Column()
 	administratorRole: string
 
+	@Column({ nullable: true })
+	logChannel: string
+
 	@Column()
 	apiKey: string
 

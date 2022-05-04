@@ -53,12 +53,12 @@ export class Discord {
 				await this._client.executeInteraction(interaction)
 			} catch (e) {
 				if (interaction.isCommand()) {
+					console.log(e)
 					Logger.logInteraction(interaction as CommandInteraction)
 					await (interaction as CommandInteraction).editReply(
 						`Could not execute this command, please try again later`,
 					)
 				}
-				console.log(e)
 			}
 		})
 

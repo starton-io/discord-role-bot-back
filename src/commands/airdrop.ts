@@ -207,7 +207,28 @@ abstract class ClaimCommand {
 				memberId: userId,
 				address,
 			})
-		} catch (e) {
+		} catch (e: any) {
+			const contractRepo = getConnection().getRepository(Contract)
+			const contract = await contractRepo.findOne({
+				where: { id: airdrop.contractId },
+			})
+			if (contract) {
+				await Logger.logDiscord(
+					contract.guildId as string,
+					"An error occured during the creation of an airdrop." +
+						"```json\n" +
+						JSON.stringify({
+							address,
+							contract: contract.id,
+							airdrop: airdrop.id,
+							status: e.response.data.statusCode,
+							error: e.response.data.errorCode,
+							message: e.response.data.message,
+							date: e.response.headers.date,
+						}) +
+						"\n```",
+				)
+			}
 			console.log(e)
 			response = `Couldn't participate to the airdrop ${airdrop.name}. Please try again later.`
 		}

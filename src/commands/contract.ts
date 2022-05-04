@@ -6,6 +6,8 @@ import { Starton } from "../starton"
 import { Contract } from "../entity/contract.entity"
 import { Guild } from "../entity/guild.entity"
 import validate from "uuid-validate"
+import { Logger } from "../logger"
+import { RoleTrigger } from "../entity/role-trigger.entity"
 
 @Discord()
 // @Permission(false)
@@ -65,7 +67,22 @@ abstract class ContractCommand {
 				address,
 				name,
 			)
-		} catch (e) {
+		} catch (e: any) {
+			await Logger.logDiscord(
+				interaction?.guildId as string,
+				"An error occured during the import of a contract." +
+					"```json\n" +
+					JSON.stringify({
+						network,
+						address,
+						status: e.response.data.statusCode,
+						error: e.response.data.errorCode,
+						message: e.response.data.message,
+						date: e.response.headers.date,
+					}) +
+					"\n```",
+			)
+			console.log(e)
 			return await interaction.editReply(
 				`A problem occured during the importation of the contract. Please check the params.`,
 			)
@@ -127,6 +144,12 @@ abstract class ContractCommand {
 			return await interaction.editReply(`Couldn't find this contract.`)
 		}
 
+		const triggerRepo = getConnection().getRepository(RoleTrigger)
+		const triggers = await triggerRepo.find({ where: { contractId } })
+		for (const trigger of triggers) {
+			await triggerRepo.delete(trigger)
+		}
+	
 		await contractRepo.delete(contract)
 
 		await interaction.editReply(`Contract ${contract.name} deleted.`)

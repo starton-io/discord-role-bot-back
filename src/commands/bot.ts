@@ -19,6 +19,14 @@ abstract class InitStartonBotCommand {
 			description: "The role that can manage the bot",
 		})
 		administratorRole: Role,
+
+		@SlashOption("logging", {
+			type: "CHANNEL",
+			required: false,
+			description: "The channel used for the logs",
+		})
+		logChannel: Role,
+
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
@@ -37,6 +45,7 @@ abstract class InitStartonBotCommand {
 			guildId: interaction?.guildId as string,
 			administratorRole: administratorRole.id,
 			apiKey: apiKey,
+			logChannel: logChannel.id,
 			signingKey: signingKey,
 		})
 
@@ -45,6 +54,7 @@ abstract class InitStartonBotCommand {
 		} catch (e) {
 			console.log("Could not init application permissions", e)
 		}
+
 		await interaction.editReply(`Discord server registered!`)
 	}
 }

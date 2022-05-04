@@ -10,6 +10,7 @@ import { Guild } from "./entity/guild.entity"
 import { RoleTrigger } from "./entity/role-trigger.entity"
 import { Airdrop } from "./entity/airdrop.entity"
 import confirmationsBlocks from "./interface/confirmations-blocks"
+import { Logger } from "./logger"
 
 export class Starton {
 	static async getApiKey(guildId: string): Promise<string | undefined> {
@@ -23,11 +24,7 @@ export class Starton {
 			.post(
 				process.env.BACK_URL + "webhook/signing-secret/regenerate",
 				{},
-				{
-					headers: {
-						"x-api-key": apiKey,
-					},
-				},
+				{ headers: { "x-api-key": apiKey } },
 			)
 			.catch((e) => {
 				console.log(e)
@@ -38,9 +35,7 @@ export class Starton {
 	static async getSigningKey(apiKey: string) {
 		const response = await axios
 			.get(process.env.BACK_URL + "webhook/signing-secret", {
-				headers: {
-					"x-api-key": apiKey,
-				},
+				headers: { "x-api-key": apiKey },
 			})
 			.catch((e) => {
 				console.log(e)
@@ -63,11 +58,7 @@ export class Starton {
 				name: name,
 				address: address,
 			},
-			{
-				headers: {
-					"x-api-key": await this.getApiKey(guildId),
-				},
-			},
+			{ headers: { "x-api-key": await this.getApiKey(guildId) } },
 		)
 	}
 
@@ -85,11 +76,7 @@ export class Starton {
 		const response = await axios.post(
 			process.env.BACK_URL + `smart-contract/${contract.network}/${contract.address}/call`,
 			{ ...body, signerWallet: airdrop.signerWallet },
-			{
-				headers: {
-					"x-api-key": await this.getApiKey(contract.guildId),
-				},
-			},
+			{ headers: { "x-api-key": await this.getApiKey(contract.guildId) } },
 		)
 
 		return response.data
@@ -105,11 +92,7 @@ export class Starton {
 				webhookUrl: process.env.WEBHOOK_URL + "hook?id=" + triggerId,
 				confirmationsBlocks: confirmationsBlocks[contract.network],
 			},
-			{
-				headers: {
-					"x-api-key": await this.getApiKey(contract.guildId),
-				},
-			},
+			{ headers: { "x-api-key": await this.getApiKey(contract.guildId) } },
 		)
 		return response.data
 	}
@@ -127,19 +110,11 @@ export class Starton {
 			params = [member.address, trigger?.tokenId]
 		}
 
-		const response = await axios
-			.post(
-				process.env.BACK_URL + `smart-contract/${contract.network}/${contract.address}/rea`,
-				{
-					functionName: "balanceOf",
-					params,
-				},
-				{
-					headers: {
-						"x-api-key": await this.getApiKey(contract.guildId),
-					},
-				},
-			)
+		const response = await axios.post(
+			process.env.BACK_URL + `smart-contract/${contract.network}/${contract.address}/rea`,
+			{ functionName: "balanceOf", params },
+			{ headers: { "x-api-key": await this.getApiKey(contract.guildId) } },
+		)
 		return BigNumber.from(response.data.response.raw)
 	}
 
@@ -162,7 +137,22 @@ export class Starton {
 					}) with ${amount.toString()} ${contract.type} (${contract.address}) `,
 				)
 			}
-		} catch (e) {
+		} catch (e: any) {
+			await Logger.logDiscord(
+				contract.guildId as string,
+				"Failed to assign a role to a member." +
+					"```json\n" +
+					JSON.stringify({
+						address: member.address,
+						contract: contract.id,
+						trigger: trigger.id,
+						status: e.response.data.statusCode,
+						error: e.response.data.errorCode,
+						message: e.response.data.message,
+						date: e.response.headers.date,
+					}) +
+					"\n```",
+			)
 			console.log(
 				`Failed role ${trigger.roleId} attribution to user ${member.memberId} (${member.address})`,
 			)
@@ -214,11 +204,23 @@ export class Starton {
 					`Role ${trigger.roleId} removed from user ${member.memberId} (${member.address})`,
 				)
 			}
-		} catch (e) {
-			console.log(
-				`Failed role ${trigger.roleId} attribution to user ${member.memberId} (${member.address})`,
-			)
+		} catch (e: any) {
 			console.log(e)
+			await Logger.logDiscord(
+				contract.guildId as string,
+				"Failed to assign a role to a member." +
+					"```json\n" +
+					JSON.stringify({
+						address: member.address,
+						contract: contract.id,
+						trigger: trigger.id,
+						status: e.response.data.statusCode,
+						error: e.response.data.errorCode,
+						message: e.response.data.message,
+						date: e.response.headers.date,
+					}) +
+					"\n```",
+			)
 		}
 	}
 }
