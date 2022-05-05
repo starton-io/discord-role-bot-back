@@ -1,9 +1,11 @@
 import "reflect-metadata"
 import { Client } from "discordx"
-import { CommandInteraction, Intents, Interaction } from "discord.js"
+import { CommandInteraction, GuildMember, Intents, Interaction } from "discord.js"
 import { importx } from "@discordx/importer"
 import { Logger } from "./logger"
-
+import { JoinEvent } from "./commands/event"
+import { ClaimAirdrop } from "./commands/airdrop"
+import discordModals from "discord-modals"
 export class Discord {
 	private static _client: Client
 
@@ -28,6 +30,8 @@ export class Discord {
 			// ],
 			silent: false,
 		})
+
+		discordModals(this._client)
 
 		this._client.once("ready", async () => {
 			await this._client.initApplicationCommands()
@@ -60,6 +64,29 @@ export class Discord {
 					)
 				}
 			}
+		})
+
+		this._client.on("modalSubmit", async (modal) => {
+			await modal.deferReply({ ephemeral: true })
+			let response = "Failed to use this command, please try again later."
+
+			if (modal.customId === "join-event-modal") {
+				const password = modal.getTextInputValue("join-event-passord")
+				const member = (await modal.guild?.members.fetch(modal.user.id)) as GuildMember
+				response = await JoinEvent.join(member, password)
+			} else if (modal.customId === "claim-airdrop-modal") {
+				const address = modal.getTextInputValue("claim-airdrop-address")
+				const password = modal.getTextInputValue("claim-airdrop-passord")
+				response = await ClaimAirdrop.claim(
+					modal.guild?.id as string,
+					modal.channel?.id as string,
+					modal.user.id,
+					address,
+					password,
+				)
+			}
+
+			modal.followUp({ content: response, ephemeral: true })
 		})
 
 		await importx(__dirname + "/commands/**/*.{js,ts}")

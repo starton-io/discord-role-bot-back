@@ -1,5 +1,7 @@
+import { Modal, showModal, TextInputComponent } from "discord-modals"
 import { ApplicationCommandPermissions, CommandInteraction, GuildChannel } from "discord.js"
 import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
+import { Discord as DiscordClient } from "../discord"
 import { getConnection } from "typeorm"
 import validate from "uuid-validate"
 import { Airdrop } from "../entity/airdrop.entity"
@@ -183,7 +185,39 @@ abstract class AirdropCommand {
 
 @Discord()
 abstract class ClaimCommand {
-	private async airdrop(
+	@Slash("claim")
+	private async openModal(interaction: CommandInteraction) {
+		const modal = new Modal()
+			.setCustomId("claim-airdrop-modal")
+			.setTitle("Airdrop password")
+			.addComponents(
+				new TextInputComponent()
+					.setCustomId("claim-airdrop-address")
+					.setLabel("Address")
+					.setStyle("SHORT")
+					.setMinLength(0)
+					.setMaxLength(100)
+					.setPlaceholder("address")
+					.setRequired(true),
+				new TextInputComponent()
+					.setCustomId("claim-airdrop-password")
+					.setLabel("Password")
+					.setStyle("SHORT")
+					.setMinLength(0)
+					.setMaxLength(100)
+					.setPlaceholder("password")
+					.setRequired(false),
+			)
+
+		await showModal(modal, {
+			client: DiscordClient.Client,
+			interaction: interaction,
+		})
+	}
+}
+
+export class ClaimAirdrop {
+	private static async airdrop(
 		airdrop: Airdrop,
 		participation: Participation,
 		timeFromLastParticipation: number,
@@ -249,7 +283,7 @@ abstract class ClaimCommand {
 		return response
 	}
 
-	private formatTime(time: number): string {
+	private static formatTime(time: number): string {
 		const hours = Math.floor(time / 3600)
 		const minutes = Math.floor((time % 3600) / 60)
 		const seconds = Math.floor(time % 60)
@@ -259,43 +293,36 @@ abstract class ClaimCommand {
 		}:${seconds < 10 ? `0${seconds}` : `${seconds}`}`
 	}
 
-	private isUserAllowed(airdrop: Airdrop, password: string, channelId: string) {
+	private static isUserAllowed(airdrop: Airdrop, password: string, channelId: string) {
 		return (
 			(!airdrop.channelId || airdrop.channelId === channelId) &&
-			(!airdrop.password || airdrop.password === password)
+			((!airdrop.password && !password) || (password && airdrop.password === password))
 		)
 	}
 
-	@Slash("claim")
-	private async claim(
-		@SlashOption("address", { required: true, description: "Your wallet address" })
+	static async claim(
+		guildId: string,
+		channelId: string,
+		userId: string,
 		address: string,
-
-		@SlashOption("password", { required: false })
 		password: string,
-
-		interaction: CommandInteraction,
-	) {
-		await interaction.deferReply({ ephemeral: true })
-
-		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
-			return await interaction.editReply(
-				"You must provide a valid address :green_circle:",
-			)
+	): Promise<string> {
+		if (!address || !address.match(/0x[a-fA-F0-9]{40}/)) {
+			return "You must provide a valid address."
 		}
 
 		const airdropRepo = getConnection().getRepository(Airdrop)
 		const participationRepo = getConnection().getRepository(Participation)
-		const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
+		const airdrops = await airdropRepo.find({ where: { guildId: guildId } })
 		const replies: string[] = []
 
 		for (const airdrop of airdrops) {
-			if (!this.isUserAllowed(airdrop, password, interaction.channel?.id as string)) continue
+			if (!this.isUserAllowed(airdrop, password, channelId as string)) continue
 
 			const participations = await participationRepo.find({
 				where: [
 					{ airdropId: airdrop.id, address },
-					{ airdropId: airdrop.id, memberId: interaction.user.id },
+					{ airdropId: airdrop.id, memberId: userId },
 				],
 			})
 
@@ -312,7 +339,7 @@ abstract class ClaimCommand {
 						participations.at(-1) as Participation,
 						timeFromLastParticipation,
 						address,
-						interaction.user.id,
+						userId,
 					),
 				)
 			} else {
@@ -326,10 +353,9 @@ abstract class ClaimCommand {
 				)
 			}
 		}
-		await interaction.editReply(
-			replies.length
-				? replies.join("\n")
-				: "There are no airdrops matching these conditions :cry:",
-		)
+
+		return replies.length
+			? replies.join("\n")
+			: "There are no airdrops matching these conditions :cry:"
 	}
 }

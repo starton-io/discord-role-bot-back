@@ -18,7 +18,7 @@ export class Logger {
 
 	static async logDiscord(guildId: string, message: string) {
 		const guildRepo = getConnection().getRepository(Guild)
-		const guild = await guildRepo.findOne({ where: [{ guildId }, { id: guildId }] })
+		const guild = await guildRepo.findOne({ where: { guildId } })
 
 		if (!guild || !guild.logChannel) return
 		try {

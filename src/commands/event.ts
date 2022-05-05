@@ -4,6 +4,7 @@ import {
 	Guild,
 	GuildChannel,
 	GuildMember,
+	Interaction,
 	Role,
 } from "discord.js"
 import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
@@ -11,6 +12,8 @@ import { getConnection } from "typeorm"
 import { Event } from "../entity/event.entity"
 import { Guild as GuildEntity } from "../entity/guild.entity"
 import { Logger } from "../logger"
+import { Discord as DiscordClient } from "../discord"
+import { Modal, TextInputComponent, showModal } from "discord-modals"
 
 @Discord()
 // @Permission(false)
@@ -241,31 +244,43 @@ abstract class EventCommand {
 @Discord()
 abstract class JoinCommand {
 	@Slash("join")
-	private async join(
-		@SlashOption("password", { required: true, description: "Password of the event" })
-		password: string,
+	private async openModal(interaction: CommandInteraction) {
+		const modal = new Modal()
+			.setCustomId("join-event-modal")
+			.setTitle("Event password")
+			.addComponents(
+				new TextInputComponent()
+					.setCustomId("join-event-password")
+					.setLabel("Password")
+					.setStyle("SHORT")
+					.setMinLength(0)
+					.setMaxLength(100)
+					.setPlaceholder("password")
+					.setRequired(true),
+			)
 
-		interaction: CommandInteraction,
-	) {
-		await interaction.deferReply({ ephemeral: true })
-
-		const eventRepo = getConnection().getRepository(Event)
-		const event = await eventRepo.findOne({
-			where: {
-				guildId: interaction?.guildId as string,
-				password: password,
-			},
+		await showModal(modal, {
+			client: DiscordClient.Client,
+			interaction: interaction,
 		})
+	}
+}
+
+export class JoinEvent {
+	static async join(member: GuildMember, password: string): Promise<string> {
+		const eventRepo = getConnection().getRepository(Event)
+		const event = await eventRepo.findOne({ where: { guildId: member.guild.id, password } })
 
 		if (!event) {
-			return await interaction.editReply(`This password doesn't match any events :cry:.`)
+			return "This password doesn't match any events :cry:."
 		}
 
-		const member = (await interaction.guild?.members.fetch(interaction.user.id)) as GuildMember
 		member.roles.add(event.roleId)
 
-		await interaction.editReply(
-			`You joined the ${event.name} event, enjoy your new privileges !`,
+		await Logger.logDiscord(
+			event.guildId as string,
+			`:green_circle: <@${member.id}> as join the event ${event.name}.`,
 		)
+		return `You joined the ${event.name} event, enjoy your new privileges !`
 	}
 }
