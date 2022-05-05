@@ -27,7 +27,7 @@ export class Discord {
 			botGuilds: [(client) => client.guilds.cache.map((guild) => guild.id)],
 			// botGuilds: [
 			//     process.env.GUILD_ID as string
-			// ],
+			// ]
 			silent: false,
 		})
 
@@ -43,6 +43,7 @@ export class Discord {
 
 			console.log("Bot started")
 		})
+
 		this._client.on("guildCreate", async (guild) => {
 			await this._client.initApplicationCommands()
 			try {
@@ -60,7 +61,7 @@ export class Discord {
 					console.log(e)
 					Logger.logInteraction(interaction as CommandInteraction)
 					await (interaction as CommandInteraction).editReply(
-						`Could not execute this command, please try again later`,
+						`Could not execute this command, please try again later.`,
 					)
 				}
 			}
@@ -68,7 +69,7 @@ export class Discord {
 
 		this._client.on("modalSubmit", async (modal) => {
 			await modal.deferReply({ ephemeral: true })
-			let response = "Failed to use this command, please try again later."
+			let response = "Could not execute this command, please try again later."
 
 			if (modal.customId === "join-event-modal") {
 				const password = modal.getTextInputValue("join-event-passord")

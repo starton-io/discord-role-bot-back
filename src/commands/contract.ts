@@ -68,7 +68,7 @@ abstract class ContractCommand {
 		} catch (e: any) {
 			await Logger.logDiscord(
 				interaction?.guildId as string,
-				":red_circle: An error occured during the import of a contract." +
+				":red_circle: An error occured during the importation of a contract." +
 					"```json\n" +
 					JSON.stringify({
 						network,
