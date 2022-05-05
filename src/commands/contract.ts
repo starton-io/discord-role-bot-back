@@ -119,6 +119,7 @@ abstract class ContractCommand {
 				`${contract.name} (${contract.id}) : An ${contract.type} contract hosted on ${contract.network} with address ${contract.address}.`,
 			)
 		})
+
 		await interaction.editReply(
 			replies.length ? replies.join("\n") : "You don't have any contracts yet.",
 		)

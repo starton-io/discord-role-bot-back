@@ -84,6 +84,7 @@ abstract class ManageStartonBotCommand {
 		const guildRepo = getConnection().getRepository(Guild)
 		const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
 
+		// Check if the new api key is valid
 		if (!(await Starton.getSigningKey(key))) {
 			return await interaction.editReply(`Api key verification failed, is this key valid ?`)
 		}
@@ -104,7 +105,7 @@ abstract class ManageStartonBotCommand {
 		const signingKey = await Starton.regenerateSigningKey(guild.apiKey)
 		if (!signingKey) {
 			return await interaction.editReply(
-				`Could not retreive signing-key, please try again later`,
+				`Could not retreive signing-key, please try again later.`,
 			)
 		}
 

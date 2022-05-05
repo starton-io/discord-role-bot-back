@@ -24,7 +24,8 @@ export class Logger {
 		try {
 			await (Discord.Client.channels.cache.get(guild.logChannel) as TextChannel).send(message)
 		} catch (e) {
-			console.log(`Couldn't log on channel ${guild.logChannel}`)
+			console.log(`Couldn't log on guild ${guild.id}`)
+			console.log(e)
 		}
 	}
 }

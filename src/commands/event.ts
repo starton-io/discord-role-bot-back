@@ -107,7 +107,7 @@ abstract class EventCommand {
 		await interaction.deferReply({ ephemeral: true })
 
 		if (!role && !newRole) {
-			return await interaction.editReply(`You must provide a role (an existing or a new one)`)
+			return await interaction.editReply(`You must provide a role (an existing or a new one).`)
 		}
 
 		const eventRepo = getConnection().getRepository(Event)

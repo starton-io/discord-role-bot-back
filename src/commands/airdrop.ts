@@ -101,9 +101,9 @@ abstract class AirdropCommand {
 		}
 
 		if (contract.type == Type.ERC1155 && !tokenId) {
-			return await interaction.editReply(`You must provide a token for an ERC-1155 contract`)
+			return await interaction.editReply(`You must provide a token for an ERC-1155 contract.`)
 		} else if (contract.type == Type.ERC721 && !metadataUri) {
-			return await interaction.editReply(`You must provide metadata for an ERC-721 contract`)
+			return await interaction.editReply(`You must provide metadata for an ERC-721 contract.`)
 		}
 
 		const airdropRepo = getConnection().getRepository(Airdrop)
@@ -144,6 +144,7 @@ abstract class AirdropCommand {
 				}.`,
 			)
 		})
+
 		await interaction.editReply(
 			replies.length ? replies.join("\n") : "You don't have any airdrops yet.",
 		)
@@ -257,9 +258,7 @@ export class ClaimAirdrop {
 			)
 		} catch (e: any) {
 			const contractRepo = getConnection().getRepository(Contract)
-			const contract = await contractRepo.findOne({
-				where: { id: airdrop.contractId },
-			})
+			const contract = await contractRepo.findOne({ where: { id: airdrop.contractId } })
 			if (contract) {
 				await Logger.logDiscord(
 					contract.guildId as string,

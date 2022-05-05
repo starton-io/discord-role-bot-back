@@ -65,8 +65,9 @@ abstract class RoleTriggerCommand {
 		const contractRepo = getConnection().getRepository(Contract)
 		const contract = await contractRepo.findOne({ where: { id: contractId } })
 		if (!contract) {
-			return await interaction.editReply(`Could find this trigger.`)
+			return await interaction.editReply(`Could find this contract.`)
 		}
+
 		if (contract.type === Type.ERC1155 && !tokenId) {
 			return await interaction.editReply(`You must fill the token field for an ERC-1155.`)
 		}
@@ -84,26 +85,29 @@ abstract class RoleTriggerCommand {
 			try {
 				await Starton.createWatcher(contract as Contract, trigger.id, watcherType)
 			} catch (e: any) {
-				await Logger.logDiscord(
-					interaction?.guildId as string,
-					":red_circle: An error occured during the creation of a watcher." +
-						"```json\n" +
-						JSON.stringify({
-							contractId,
-							tokenId,
-							watcherType,
-							status: e.response.data.statusCode,
-							error: e.response.data.errorCode,
-							message: e.response.data.message,
-							date: e.response.headers.date,
-						}) +
-						"\n```",
-				)
-				console.log(e)
-				triggerRepo.delete(trigger)
-				return await interaction.editReply(
-					`A problem occured during the creation of the watcher. Please try again later.`,
-				)
+				// Everything is fine if the watcher already exist
+				if (e.statusCode !== 409) {
+					await Logger.logDiscord(
+						interaction?.guildId as string,
+						":red_circle: An error occured during the creation of a watcher." +
+							"```json\n" +
+							JSON.stringify({
+								contractId,
+								tokenId,
+								watcherType,
+								status: e.response.data.statusCode,
+								error: e.response.data.errorCode,
+								message: e.response.data.message,
+								date: e.response.headers.date,
+							}) +
+							"\n```",
+					)
+					console.log(e)
+					triggerRepo.delete(trigger)
+					return await interaction.editReply(
+						`A problem occured during the creation of the watcher. Please try again later.`,
+					)
+				}
 			}
 		}
 

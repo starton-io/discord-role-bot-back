@@ -34,9 +34,7 @@ createConnection({
 
 	app.post("/verify/:id", async (req: Request, res: Response) => {
 		if (!req.body.signature) {
-			return res.status(400).json({
-				error: "You must include a signature",
-			})
+			return res.status(400).json({ error: "You must include a signature" })
 		}
 
 		const link = await connection.getRepository(Link).findOne(req.params.id)
@@ -44,12 +42,22 @@ createConnection({
 			return res.status(404).json({ error: "Invalid id" })
 		}
 
-		const address = ethers.utils.verifyMessage("Welcome to Starton", req.body.signature)
+		let address: string
+		try {
+			address = ethers.utils.verifyMessage("Welcome to Starton", req.body.signature)
+		} catch (e) {
+			console.log(e)
+			return res.status(400).json({ error: "Failed to verify this address" })
+		}
 		const memberRepo = getConnection().getRepository(Member)
+		const existingMember = await memberRepo.findOne({ where: { address } })
+		if (existingMember) {
+			return res.status(400).json({ error: "A used with this address already exist" })
+		}
 		const member = await memberRepo.save({
 			memberId: link.memberId,
 			guildId: link.guildId,
-			address: address,
+			address,
 		})
 
 		await Starton.assignRolesToMember(member)
