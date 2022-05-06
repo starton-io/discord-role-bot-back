@@ -2,4 +2,3 @@
 build
 node_modules
 .idea
-src/config/provider.ts

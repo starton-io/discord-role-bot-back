@@ -6,6 +6,7 @@ import { Logger } from "./logger"
 import { JoinEvent } from "./commands/event"
 import { ClaimAirdrop } from "./commands/airdrop"
 import discordModals from "discord-modals"
+
 export class Discord {
 	private static _client: Client
 

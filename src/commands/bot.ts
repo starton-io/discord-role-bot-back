@@ -1,10 +1,11 @@
-import { ApplicationCommandPermissions, CommandInteraction, Role } from "discord.js"
+import { ApplicationCommandPermissions, CommandInteraction, GuildMember, Role } from "discord.js"
 import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
 import { Starton } from "../starton"
 import { Guild } from "../entity/guild.entity"
 import { Discord as DiscordIntance } from "../discord"
 import { Logger } from "../logger"
+import { Permissions } from "../permissions"
 
 @Discord()
 abstract class InitStartonBotCommand {
@@ -81,6 +82,10 @@ abstract class ManageStartonBotCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		const guildRepo = getConnection().getRepository(Guild)
 		const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })
 
@@ -98,6 +103,10 @@ abstract class ManageStartonBotCommand {
 	@Slash("update-signing-key")
 	private async updateSigningKey(interaction: CommandInteraction) {
 		await interaction.deferReply({ ephemeral: true })
+
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
 
 		const guildRepo = getConnection().getRepository(Guild)
 		const guild = await guildRepo.findOneOrFail({ where: { guildId: interaction.guildId } })

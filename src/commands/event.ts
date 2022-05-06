@@ -14,6 +14,7 @@ import { Guild as GuildEntity } from "../entity/guild.entity"
 import { Logger } from "../logger"
 import { Discord as DiscordClient } from "../discord"
 import { Modal, TextInputComponent, showModal } from "discord-modals"
+import { Permissions } from "../permissions"
 
 @Discord()
 // @Permission(false)
@@ -106,6 +107,10 @@ abstract class EventCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		if (!role && !newRole) {
 			return await interaction.editReply(`You must provide a role (an existing or a new one).`)
 		}
@@ -167,6 +172,10 @@ abstract class EventCommand {
 	private async listEvents(interaction: CommandInteraction) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		const eventRepo = getConnection().getRepository(Event)
 		const events = await eventRepo.find({ where: { guildId: interaction.guild?.id } })
 
@@ -203,6 +212,10 @@ abstract class EventCommand {
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
+
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
 
 		const eventRepo = getConnection().getRepository(Event)
 		const event = await eventRepo.findOne({

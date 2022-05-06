@@ -1,6 +1,6 @@
 import { Modal, showModal, TextInputComponent } from "discord-modals"
-import { ApplicationCommandPermissions, CommandInteraction, GuildChannel } from "discord.js"
-import { Discord, Permission, Slash, SlashGroup, SlashOption } from "discordx"
+import { ApplicationCommandPermissions, CommandInteraction, GuildChannel, GuildMember } from "discord.js"
+import { Discord, Slash, SlashGroup, SlashOption } from "discordx"
 import { Discord as DiscordClient } from "../discord"
 import { getConnection } from "typeorm"
 import validate from "uuid-validate"
@@ -11,6 +11,7 @@ import { Participation } from "../entity/participation.entity"
 import { Type } from "../interface/global"
 import { Logger } from "../logger"
 import { Starton } from "../starton"
+import { Permissions } from "../permissions"
 
 @Discord()
 // @Permission(true)
@@ -85,6 +86,10 @@ abstract class AirdropCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		if (!validate(contractId)) {
 			return await interaction.editReply(`You must provide a valid ID.`)
 		}
@@ -133,6 +138,10 @@ abstract class AirdropCommand {
 	private async listAirdrops(interaction: CommandInteraction) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		const airdropRepo = getConnection().getRepository(Airdrop)
 		const airdrops = await airdropRepo.find({ where: { guildId: interaction.guild?.id } })
 
@@ -161,6 +170,10 @@ abstract class AirdropCommand {
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
+
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
 
 		const airdropRepo = getConnection().getRepository(Airdrop)
 		const airdrop = await airdropRepo.findOne({ where: { id: airdropId } })

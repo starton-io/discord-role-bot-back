@@ -1,4 +1,4 @@
-import { ApplicationCommandPermissions, CommandInteraction, Role } from "discord.js"
+import { ApplicationCommandPermissions, CommandInteraction, GuildMember, Role } from "discord.js"
 import { Discord, Permission, Slash, SlashChoice, SlashGroup, SlashOption } from "discordx"
 import { getConnection } from "typeorm"
 import { Network, Type } from "../interface/global"
@@ -8,6 +8,7 @@ import { Guild } from "../entity/guild.entity"
 import validate from "uuid-validate"
 import { Logger } from "../logger"
 import { RoleTrigger } from "../entity/role-trigger.entity"
+import { Permissions } from "../permissions"
 
 @Discord()
 // @Permission(false)
@@ -52,6 +53,10 @@ abstract class ContractCommand {
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
+
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
 
 		if (!address.match(/0x[a-fA-F0-9]{40}/)) {
 			return await interaction.editReply("You must provide a valid address :green_circle:")
@@ -108,6 +113,10 @@ abstract class ContractCommand {
 	private async listContracts(interaction: CommandInteraction) {
 		await interaction.deferReply({ ephemeral: true })
 
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
+
 		const contractRepo = getConnection().getRepository(Contract)
 		const contracts = await contractRepo.find({
 			where: { guildId: interaction?.guildId as string },
@@ -136,6 +145,10 @@ abstract class ContractCommand {
 		interaction: CommandInteraction,
 	) {
 		await interaction.deferReply({ ephemeral: true })
+
+		if (! await Permissions.isAdmin(interaction.guild?.id as string, interaction.member as GuildMember)) {
+			return await interaction.editReply(`You are not allowed to use this command.`)
+		}
 
 		if (!validate(contractId)) {
 			return await interaction.editReply(`You must provide a valid ID.`)

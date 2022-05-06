@@ -26,7 +26,7 @@ cd discord-role-bot-back
 ## Start in dev
 ```bash
 Create a .env from the .env.example
-Create the "uuid-ossp" extension in database
+Create the "uuid-ossp" extension in database if needed (CREATE EXTENSION IF NOT EXISTS "uuid-ossp";)
 yarn dev #(or npm run dev)
 ```
 
