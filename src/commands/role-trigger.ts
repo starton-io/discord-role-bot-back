@@ -25,7 +25,7 @@ import { Permissions } from "../permissions"
 @SlashGroup({ name: "trigger", description: "Manage your triggers" })
 @SlashGroup("trigger")
 abstract class RoleTriggerCommand {
-	@Slash("create")
+	@Slash("create-trigger")
 	private async createTrigger(
 		@SlashOption("contract", {
 			required: true,
@@ -128,7 +128,7 @@ abstract class RoleTriggerCommand {
 		)
 	}
 
-	@Slash("list")
+	@Slash("list-trigger")
 	private async listTriggers(
 		@SlashOption("contract", {
 			required: true,
@@ -169,7 +169,7 @@ abstract class RoleTriggerCommand {
 		)
 	}
 
-	@Slash("delete")
+	@Slash("delete-trigger")
 	private async deleteTrigger(
 		@SlashOption("trigger", {
 			required: true,
