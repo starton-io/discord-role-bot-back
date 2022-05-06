@@ -71,6 +71,7 @@ abstract class ContractCommand {
 				name,
 			)
 		} catch (e: any) {
+			console.log(e)
 			await Logger.logDiscord(
 				interaction?.guildId as string,
 				":red_circle: An error occured during the importation of a contract." +
@@ -78,14 +79,13 @@ abstract class ContractCommand {
 					JSON.stringify({
 						network,
 						address,
-						status: e.response.data.statusCode,
-						error: e.response.data.errorCode,
-						message: e.response.data.message,
-						date: e.response.headers.date,
+						status: e.response.data?.statusCode,
+						error: e.response.data?.errorCode,
+						message: e.response.data?.message,
+						date: e.response.headers?.date,
 					}) +
 					"\n```",
 			)
-			console.log(e)
 			return await interaction.editReply(
 				`A problem occured during the importation of the contract. Please check the params.`,
 			)

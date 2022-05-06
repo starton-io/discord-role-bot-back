@@ -73,12 +73,12 @@ export class Discord {
 			let response = "Could not execute this command, please try again later."
 
 			if (modal.customId === "join-event-modal") {
-				const password = modal.getTextInputValue("join-event-passord")
+				const password = modal.getTextInputValue("join-event-password")
 				const member = (await modal.guild?.members.fetch(modal.user.id)) as GuildMember
 				response = await JoinEvent.join(member, password)
 			} else if (modal.customId === "claim-airdrop-modal") {
 				const address = modal.getTextInputValue("claim-airdrop-address")
-				const password = modal.getTextInputValue("claim-airdrop-passord")
+				const password = modal.getTextInputValue("claim-airdrop-password")
 				response = await ClaimAirdrop.claim(
 					modal.guild?.id as string,
 					modal.channel?.id as string,
