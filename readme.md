@@ -52,3 +52,5 @@ You can find the full documentation on their website: https://discord-ts.js.org/
 
 ## Use directly
 https://discord.com/api/oauth2/authorize?client_id=919408561992376331&permissions=2415921152&scope=applications.commands%20bot
+
+#test
